@@ -5,7 +5,7 @@ const LineItems = {
     initialized: false,
     filters: {},
     page: 1,
-    sortKey: 'transaction_completed_at',
+    sortKey: 'order_placed_at',
     sortDir: 'desc',
     statuses: [],
     livestreams: [],
@@ -16,18 +16,31 @@ const LineItems = {
         if (!this.initialized) {
             panel.innerHTML = `
                 <div class="page-header">
-                    <h1>Items &amp; Costs</h1>
+                    <h1>Items &amp; Costs <span id="line-items-filter-desc" class="filter-description"></span></h1>
+                    <button class="btn btn-primary" id="btn-upload-earnings">Upload Earnings CSV</button>
                 </div>
+                <div id="line-items-cards" class="cards-row"></div>
                 <div id="line-items-filters"></div>
                 <div id="line-items-table"></div>
             `;
 
+            // Upload button
+            document.getElementById('btn-upload-earnings').addEventListener('click', () => {
+                Upload.showModal(
+                    'Upload Earnings CSV',
+                    '/api/uploads/earnings',
+                    'Accepted format: month_day_month_day_year_earnings.csv',
+                    () => { this.loadData(); }
+                );
+            });
+
             // Load filter options
             await this.loadFilterOptions();
 
+            // Default to most recent auction
+            const defaultAuction = this.livestreams.length > 0 ? this.livestreams[0].livestream_id : '';
+
             Filters.render(document.getElementById('line-items-filters'), [
-                { type: 'date', name: 'date_from', label: 'From Date' },
-                { type: 'date', name: 'date_to', label: 'To Date' },
                 {
                     type: 'select', name: 'status', label: 'Status',
                     options: this.statuses.map(s => ({ value: s.status_type_id, label: s.status_name }))
@@ -41,13 +54,22 @@ const LineItems = {
                 },
                 {
                     type: 'select', name: 'livestream_id', label: 'Auction',
+                    value: defaultAuction,
                     options: this.livestreams.map(ls => ({
                         value: ls.livestream_id,
                         label: (ls.stream_date || '') + ' - ' + ls.livestream_title + ' (' + ls.total_items + ' items)'
                     }))
                 },
                 { type: 'text', name: 'search', label: 'Search', placeholder: 'Title or buyer...' },
-            ], (f) => { this.filters = f; this.page = 1; this.loadData(); });
+                { type: 'date', name: 'date_from', label: 'From Date' },
+                { type: 'date', name: 'date_to', label: 'To Date' },
+            ], (f) => { this.filters = f; this.page = 1; this.loadData(); },
+            { descriptionEl: 'line-items-filter-desc' });
+
+            // Set initial filter to default auction
+            if (defaultAuction) {
+                this.filters = { livestream_id: defaultAuction };
+            }
 
             this.initialized = true;
         }
@@ -77,6 +99,7 @@ const LineItems = {
                 order: this.sortDir,
             };
             const result = await API.get('/api/line-items', params);
+            this.renderCards(result.summary || {});
             this.renderTable(result);
         } catch (err) {
             App.toast(err.message, 'error');
@@ -85,13 +108,107 @@ const LineItems = {
         }
     },
 
+    renderCards(s) {
+        const container = document.getElementById('line-items-cards');
+        const cur = (v) => App.formatCurrency(v);
+        const profitClass = (s.profit || 0) >= 0 ? 'val-income' : 'val-negative';
+        const pctClass = (s.profit_pct || 0) >= 0 ? 'val-income' : 'val-negative';
+
+        container.innerHTML = `
+            <div class="cards-group" style="flex:0 0 auto;grid-template-columns:repeat(3,1fr);">
+                <div class="card">
+                    <div class="card-label">Items Sold</div>
+                    <div class="card-value val-count">${s.auction_count || 0}</div>
+                    <div class="card-sub">Avg price: <span class="val-income">${cur(s.avg_price)}</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Giveaways</div>
+                    <div class="card-value val-count">${s.giveaway_count || 0}</div>
+                    <div class="card-sub"><span class="val-count">${s.buyer_giveaways || 0}</span> buyer giveaways</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Buyers</div>
+                    <div class="card-value val-buyer">${s.unique_buyers || 0}</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Shipments</div>
+                    <div class="card-value val-count">${s.unique_shipments || 0}</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Tips</div>
+                    <div class="card-value val-count">${s.tip_count || 0}</div>
+                    <div class="card-sub"><span class="val-income">${cur(s.total_tips)}</span></div>
+                </div>
+            </div>
+            <div class="cards-value-cols">
+                <div class="cards-col">
+                    <div class="card">
+                        <div class="card-label">Buyer Paid</div>
+                        <div class="card-value val-count">${cur(s.total_buyer_paid)}</div>
+                        <div class="card-sub">Includes shipping &amp; tax</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-label">Giveaway Expense</div>
+                        <div class="card-value val-negative">${cur(s.giveaway_net)}</div>
+                        <div class="card-sub">Included in Shipping fee</div>
+                    </div>
+                </div>
+                <div class="cards-col">
+                    <div class="card">
+                        <div class="card-label">Payout Amount</div>
+                        <div class="card-value ${(s.total_earnings || 0) >= 0 ? 'val-income' : 'val-negative'}">${cur(s.total_earnings)}</div>
+                        <div class="card-sub">Total Sales less expenses</div>
+                    </div>
+                </div>
+                <div class="cards-col">
+                    <div class="card">
+                        <div class="card-label">Total Sales</div>
+                        <div class="card-value val-income">${cur(s.total_item_price)}</div>
+                        <div class="card-sub">SUM of Item Price (Auction)<br>Includes Tips</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-label">Total Fees</div>
+                        <div class="card-value val-expense">${cur(s.total_fees)}</div>
+                        <div class="card-sub">
+                            Commission: ${cur(s.commission_fee)}<br>
+                            Processing: ${cur(s.processing_fee)}<br>
+                            Shipping: ${cur(s.total_shipping)}<br>
+                            Tax on Commission: ${cur(s.tax_on_commission)}<br>
+                            Tax on Processing: ${cur(s.tax_on_processing)}<br>
+                            <span style="border-top:1px solid #ddd;display:block;margin-top:4px;padding-top:4px;">
+                                Auction fees: ${cur(s.auction_fees)} &bull; Giveaway fees: ${cur(s.giveaway_fees)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="cards-col">
+                    <div class="card">
+                        <div class="card-label">Item Costs</div>
+                        <div class="card-value val-expense">${cur(s.total_costs)}</div>
+                        <div class="card-sub">Includes Card, Mags, additional shipping</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-label">Profit</div>
+                        <div class="card-value ${profitClass}">${cur(s.profit)}</div>
+                        <div class="card-sub">Sales ${cur(s.total_item_price)} - Fees ${cur(s.total_fees)} (incl ${cur(s.giveaway_fees)} giveaway) - Costs ${cur(s.total_costs)}</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-label">Profit %</div>
+                        <div class="card-value ${pctClass}">${(s.profit_pct || 0).toFixed(1)}%</div>
+                        <div class="card-sub">Profit / Total Sales</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
     renderTable(result) {
         const container = document.getElementById('line-items-table');
 
         DataTable.render(container, {
             columns: [
                 {
-                    key: 'transaction_completed_at', label: 'Date', sortable: true,
+                    key: 'order_placed_at', label: 'Date', sortable: true,
                     format: (v) => App.formatDatetime(v)
                 },
                 { key: 'order_id', label: 'Order ID', sortable: true },
@@ -197,7 +314,7 @@ const LineItems = {
                     <div class="detail-list">
                         <div class="detail-item"><div class="detail-label">Order ID</div><div class="detail-value">${item.order_id || '-'}</div></div>
                         <div class="detail-item"><div class="detail-label">Ledger ID</div><div class="detail-value">${item.ledger_transaction_id}</div></div>
-                        <div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">${App.formatDatetime(item.transaction_completed_at)}</div></div>
+                        <div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">${App.formatDatetime(item.order_placed_at)}</div></div>
                         <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value">${item.transaction_type}</div></div>
                         <div class="detail-item"><div class="detail-label">Format</div><div class="detail-value">${item.buy_format || '-'}</div></div>
                         <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value">${item.product_category || '-'}</div></div>

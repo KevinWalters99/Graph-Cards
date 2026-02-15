@@ -14,12 +14,13 @@ const Payouts = {
         if (!this.initialized) {
             panel.innerHTML = `
                 <div class="page-header">
-                    <h1>Payouts</h1>
+                    <h1>Payouts <span id="payouts-filter-desc" class="filter-description"></span></h1>
                     <div>
                         <button class="btn btn-success" id="btn-add-payout">Add Payout</button>
                         <button class="btn btn-primary" id="btn-upload-payouts" style="margin-left:8px;">Upload CSV</button>
                     </div>
                 </div>
+                <div id="payouts-summary" class="payout-summary"></div>
                 <div id="payouts-filters"></div>
                 <div id="payouts-table"></div>
             `;
@@ -35,8 +36,6 @@ const Payouts = {
             });
 
             Filters.render(document.getElementById('payouts-filters'), [
-                { type: 'date', name: 'date_from', label: 'From Date' },
-                { type: 'date', name: 'date_to', label: 'To Date' },
                 {
                     type: 'select', name: 'status', label: 'Status',
                     options: [
@@ -45,7 +44,10 @@ const Payouts = {
                         { value: 'Failed', label: 'Failed' },
                     ]
                 },
-            ], (f) => { this.filters = f; this.page = 1; this.loadData(); });
+                { type: 'date', name: 'date_from', label: 'From Date' },
+                { type: 'date', name: 'date_to', label: 'To Date' },
+            ], (f) => { this.filters = f; this.page = 1; this.loadData(); },
+            { descriptionEl: 'payouts-filter-desc' });
 
             this.initialized = true;
         }
@@ -64,12 +66,27 @@ const Payouts = {
                 order: this.sortDir,
             };
             const result = await API.get('/api/payouts', params);
+            this.renderSummary(result.summary || {});
             this.renderTable(result);
         } catch (err) {
             App.toast(err.message, 'error');
         } finally {
             App.hideLoading();
         }
+    },
+
+    renderSummary(s) {
+        const el = document.getElementById('payouts-summary');
+        const cur = App.formatCurrency;
+        el.innerHTML = `
+            <span class="val-income">${cur(s.total_amount)}</span> total
+            <span class="payout-summary-sep">|</span>
+            <span class="val-count">${s.payout_count}</span> payouts
+            <span class="payout-summary-sep">|</span>
+            <span class="val-income">${cur(s.completed_amount)}</span> completed (${s.completed_count})
+            <span class="payout-summary-sep">|</span>
+            <span class="val-count">${s.in_progress_count}</span> in progress
+        `;
     },
 
     renderTable(result) {

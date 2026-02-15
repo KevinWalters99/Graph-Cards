@@ -24,7 +24,7 @@ class FinancialSummaryController
 
         // -- Yearly summary --
         $yearlySql = "SELECT
-            YEAR(a.transaction_completed_at) AS year,
+            YEAR(a.order_placed_at) AS year,
             COUNT(*) AS total_items,
             SUM(a.quantity_sold) AS total_quantity,
             SUM(CASE WHEN a.buy_format = 'AUCTION' THEN 1 ELSE 0 END) AS auction_count,
@@ -38,16 +38,18 @@ class FinancialSummaryController
                 COALESCE(a.commission_fee, 0) +
                 COALESCE(a.payment_processing_fee, 0) +
                 COALESCE(a.tax_on_commission_fee, 0) +
-                COALESCE(a.tax_on_payment_processing_fee, 0)
+                COALESCE(a.tax_on_payment_processing_fee, 0) +
+                COALESCE(a.shipping_fee, 0)
             ), 0) AS total_fees,
             COALESCE(SUM(a.shipping_fee), 0) AS total_shipping,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price ELSE 0 END), 0) AS total_item_price,
             COALESCE(AVG(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price END), 0) AS avg_auction_price,
             COUNT(DISTINCT a.buyer_id) AS unique_buyers,
             COUNT(DISTINCT a.livestream_id) AS unique_livestreams
         FROM CG_AuctionLineItems a
-        WHERE a.transaction_completed_at IS NOT NULL
+        WHERE a.order_placed_at IS NOT NULL
           {$statusFilter}
-        GROUP BY YEAR(a.transaction_completed_at)
+        GROUP BY YEAR(a.order_placed_at)
         ORDER BY year DESC";
 
         $yearly = $pdo->query($yearlySql)->fetchAll();
@@ -67,7 +69,7 @@ class FinancialSummaryController
                 "SELECT COALESCE(SUM(c.cost_amount), 0) AS total_item_costs
                  FROM CG_ItemCosts c
                  JOIN CG_AuctionLineItems a ON a.ledger_transaction_id = c.ledger_transaction_id
-                 WHERE YEAR(a.transaction_completed_at) = {$yr}
+                 WHERE YEAR(a.order_placed_at) = {$yr}
                    {$statusFilter}"
             )->fetch();
             $row['total_item_costs'] = round((float) $costRow['total_item_costs'], 2);
@@ -94,8 +96,9 @@ class FinancialSummaryController
             $row['avg_auction_price'] = round((float) $row['avg_auction_price'], 2);
             $row['unique_buyers'] = (int) $row['unique_buyers'];
             $row['unique_livestreams'] = (int) $row['unique_livestreams'];
+            $row['total_item_price'] = round((float) $row['total_item_price'], 2);
             $row['net'] = round(
-                $row['total_earnings'] - $row['total_fees'] - $row['total_item_costs'] - $row['total_general_costs'],
+                $row['total_item_price'] - $row['total_fees'] - $row['total_item_costs'] - $row['total_general_costs'],
                 2
             );
         }
@@ -103,8 +106,8 @@ class FinancialSummaryController
 
         // -- Quarterly summary --
         $quarterlySql = "SELECT
-            YEAR(a.transaction_completed_at) AS year,
-            QUARTER(a.transaction_completed_at) AS quarter,
+            YEAR(a.order_placed_at) AS year,
+            QUARTER(a.order_placed_at) AS quarter,
             COUNT(*) AS total_items,
             SUM(a.quantity_sold) AS total_quantity,
             SUM(CASE WHEN a.buy_format = 'AUCTION' THEN 1 ELSE 0 END) AS auction_count,
@@ -118,16 +121,18 @@ class FinancialSummaryController
                 COALESCE(a.commission_fee, 0) +
                 COALESCE(a.payment_processing_fee, 0) +
                 COALESCE(a.tax_on_commission_fee, 0) +
-                COALESCE(a.tax_on_payment_processing_fee, 0)
+                COALESCE(a.tax_on_payment_processing_fee, 0) +
+                COALESCE(a.shipping_fee, 0)
             ), 0) AS total_fees,
             COALESCE(SUM(a.shipping_fee), 0) AS total_shipping,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price ELSE 0 END), 0) AS total_item_price,
             COALESCE(AVG(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price END), 0) AS avg_auction_price,
             COUNT(DISTINCT a.buyer_id) AS unique_buyers,
             COUNT(DISTINCT a.livestream_id) AS unique_livestreams
         FROM CG_AuctionLineItems a
-        WHERE a.transaction_completed_at IS NOT NULL
+        WHERE a.order_placed_at IS NOT NULL
           {$statusFilter}
-        GROUP BY YEAR(a.transaction_completed_at), QUARTER(a.transaction_completed_at)
+        GROUP BY YEAR(a.order_placed_at), QUARTER(a.order_placed_at)
         ORDER BY year DESC, quarter DESC";
 
         $quarterly = $pdo->query($quarterlySql)->fetchAll();
@@ -157,7 +162,7 @@ class FinancialSummaryController
                 "SELECT COALESCE(SUM(c.cost_amount), 0) AS total_item_costs
                  FROM CG_ItemCosts c
                  JOIN CG_AuctionLineItems a ON a.ledger_transaction_id = c.ledger_transaction_id
-                 WHERE a.transaction_completed_at BETWEEN :cstart AND :cend
+                 WHERE a.order_placed_at BETWEEN :cstart AND :cend
                    {$statusFilter}"
             );
             $cStmt->execute([':cstart' => $qStart . ' 00:00:00', ':cend' => $qEnd . ' 23:59:59']);
@@ -190,8 +195,9 @@ class FinancialSummaryController
             $row['avg_auction_price'] = round((float) $row['avg_auction_price'], 2);
             $row['unique_buyers'] = (int) $row['unique_buyers'];
             $row['unique_livestreams'] = (int) $row['unique_livestreams'];
+            $row['total_item_price'] = round((float) $row['total_item_price'], 2);
             $row['net'] = round(
-                $row['total_earnings'] - $row['total_fees'] - $row['total_item_costs'] - $row['total_general_costs'],
+                $row['total_item_price'] - $row['total_fees'] - $row['total_item_costs'] - $row['total_general_costs'],
                 2
             );
         }

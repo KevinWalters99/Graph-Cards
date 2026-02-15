@@ -82,6 +82,17 @@ $router->post('/api/cost-matrix/preview', ['CostMatrixController', 'preview']);
 $router->post('/api/cost-matrix/apply', ['CostMatrixController', 'apply']);
 $router->post('/api/cost-matrix/clear', ['CostMatrixController', 'clear']);
 
+// === Analytics ===
+$router->get('/api/analytics/metrics',           ['AnalyticsController', 'listMetrics']);
+$router->put('/api/analytics/metrics/{id}',       ['AnalyticsController', 'updateMetric']);
+$router->get('/api/analytics/milestones',         ['AnalyticsController', 'listMilestones']);
+$router->post('/api/analytics/milestones',        ['AnalyticsController', 'createMilestone']);
+$router->put('/api/analytics/milestones/{id}',    ['AnalyticsController', 'updateMilestone']);
+$router->delete('/api/analytics/milestones/{id}', ['AnalyticsController', 'deleteMilestone']);
+$router->get('/api/analytics/actuals',            ['AnalyticsController', 'getActuals']);
+$router->get('/api/analytics/forecast',           ['AnalyticsController', 'getForecast']);
+$router->get('/api/analytics/pacing',             ['AnalyticsController', 'getPacing']);
+
 // === Maintenance ===
 $router->get('/api/maintenance/upload-log', ['MaintenanceController', 'uploadLog']);
 

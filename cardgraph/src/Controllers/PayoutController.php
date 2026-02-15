@@ -43,6 +43,21 @@ class PayoutController
         $countStmt->execute($bind);
         $total = (int) $countStmt->fetch()['total'];
 
+        // Summary excluding Failed
+        $summaryWhere = !empty($where)
+            ? 'WHERE ' . implode(' AND ', $where) . " AND p.status != 'Failed'"
+            : "WHERE p.status != 'Failed'";
+        $summaryStmt = $pdo->prepare("SELECT
+            COALESCE(SUM(p.amount), 0) AS total_amount,
+            COUNT(*) AS payout_count,
+            SUM(CASE WHEN p.status = 'Completed' THEN 1 ELSE 0 END) AS completed_count,
+            COALESCE(SUM(CASE WHEN p.status = 'Completed' THEN p.amount ELSE 0 END), 0) AS completed_amount,
+            SUM(CASE WHEN p.status = 'In Progress' THEN 1 ELSE 0 END) AS in_progress_count,
+            COALESCE(SUM(CASE WHEN p.status = 'In Progress' THEN p.amount ELSE 0 END), 0) AS in_progress_amount
+        FROM CG_Payouts p {$summaryWhere}");
+        $summaryStmt->execute($bind);
+        $summary = $summaryStmt->fetch();
+
         $offset = ($page - 1) * $perPage;
         $sql = "SELECT p.*, u.display_name AS entered_by_name
                 FROM CG_Payouts p
@@ -59,6 +74,14 @@ class PayoutController
             'total'    => $total,
             'page'     => $page,
             'per_page' => $perPage,
+            'summary'  => [
+                'total_amount'      => round((float) $summary['total_amount'], 2),
+                'payout_count'      => (int) $summary['payout_count'],
+                'completed_count'   => (int) $summary['completed_count'],
+                'completed_amount'  => round((float) $summary['completed_amount'], 2),
+                'in_progress_count' => (int) $summary['in_progress_count'],
+                'in_progress_amount' => round((float) $summary['in_progress_amount'], 2),
+            ],
         ]);
     }
 

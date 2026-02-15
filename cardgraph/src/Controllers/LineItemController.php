@@ -13,7 +13,7 @@ class LineItemController
 
         $page    = max(1, (int) ($_GET['page'] ?? 1));
         $perPage = min(100, max(1, (int) ($_GET['per_page'] ?? 50)));
-        $sortKey = $_GET['sort'] ?? 'transaction_completed_at';
+        $sortKey = $_GET['sort'] ?? 'order_placed_at';
         $sortDir = strtoupper($_GET['order'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
 
         // Whitelist sort columns — maps sort key to SQL expression
@@ -34,7 +34,7 @@ class LineItemController
             'profit'                   => '(a.transaction_amount - COALESCE(ic.total_cost, 0))',
         ];
         if (!array_key_exists($sortKey, $allowedSorts)) {
-            $sortKey = 'transaction_completed_at';
+            $sortKey = 'order_placed_at';
         }
         $sortExpr = $allowedSorts[$sortKey];
 
@@ -43,11 +43,11 @@ class LineItemController
         $bind = [];
 
         if (!empty($_GET['date_from'])) {
-            $where[] = 'a.transaction_completed_at >= :date_from';
+            $where[] = 'a.order_placed_at >= :date_from';
             $bind[':date_from'] = $_GET['date_from'] . ' 00:00:00';
         }
         if (!empty($_GET['date_to'])) {
-            $where[] = 'a.transaction_completed_at <= :date_to';
+            $where[] = 'a.order_placed_at <= :date_to';
             $bind[':date_to'] = $_GET['date_to'] . ' 23:59:59';
         }
         if (!empty($_GET['status'])) {
@@ -74,13 +74,63 @@ class LineItemController
 
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
-        // Count
-        $countSql = "SELECT COUNT(*) as total FROM CG_AuctionLineItems a
-                     LEFT JOIN CG_Buyers b ON b.buyer_id = a.buyer_id
-                     {$whereClause}";
-        $countStmt = $pdo->prepare($countSql);
+        // Summary aggregates
+        $summarySql = "SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN a.buy_format = 'AUCTION' THEN 1 ELSE 0 END) AS auction_count,
+            SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN 1 ELSE 0 END) AS giveaway_count,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN a.transaction_amount ELSE 0 END), 0) AS giveaway_net,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.transaction_amount ELSE 0 END), 0) AS total_sales,
+            COALESCE(SUM(a.transaction_amount), 0) AS total_earnings,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price ELSE 0 END), 0) AS total_item_price,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.buyer_paid ELSE 0 END), 0) AS total_buyer_paid,
+            COALESCE(SUM(COALESCE(a.commission_fee, 0)), 0) AS total_commission,
+            COALESCE(SUM(COALESCE(a.payment_processing_fee, 0)), 0) AS total_processing,
+            COALESCE(SUM(COALESCE(a.tax_on_commission_fee, 0)), 0) AS total_tax_commission,
+            COALESCE(SUM(COALESCE(a.tax_on_payment_processing_fee, 0)), 0) AS total_tax_processing,
+            COALESCE(SUM(COALESCE(a.shipping_fee, 0)), 0) AS total_shipping,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN
+                COALESCE(a.commission_fee, 0) + COALESCE(a.payment_processing_fee, 0) +
+                COALESCE(a.tax_on_commission_fee, 0) + COALESCE(a.tax_on_payment_processing_fee, 0) +
+                COALESCE(a.shipping_fee, 0) ELSE 0 END), 0) AS giveaway_fees,
+            SUM(CASE WHEN a.transaction_type = 'TIP' THEN 1 ELSE 0 END) AS tip_count,
+            COALESCE(SUM(CASE WHEN a.transaction_type = 'TIP' THEN a.transaction_amount ELSE 0 END), 0) AS total_tips,
+            COUNT(DISTINCT a.buyer_id) AS unique_buyers,
+            COUNT(DISTINCT a.shipment_id) AS unique_shipments,
+            COALESCE(AVG(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price END), 0) AS avg_price
+        FROM CG_AuctionLineItems a
+        LEFT JOIN CG_Buyers b ON b.buyer_id = a.buyer_id
+        {$whereClause}";
+        $countStmt = $pdo->prepare($summarySql);
         $countStmt->execute($bind);
-        $total = (int) $countStmt->fetch()['total'];
+        $summary = $countStmt->fetch();
+        $total = (int) $summary['total'];
+
+        // Giveaways won by buyers who also purchased
+        $bgWhere = !empty($where)
+            ? 'WHERE ' . implode(' AND ', $where) . " AND a.buy_format = 'GIVEAWAY'"
+            : "WHERE a.buy_format = 'GIVEAWAY'";
+        $bgSql = "SELECT COUNT(*) AS buyer_giveaways
+            FROM CG_AuctionLineItems a
+            LEFT JOIN CG_Buyers b ON b.buyer_id = a.buyer_id
+            {$bgWhere}
+            AND a.buyer_id IN (
+                SELECT DISTINCT a2.buyer_id FROM CG_AuctionLineItems a2
+                WHERE a2.buy_format = 'AUCTION'
+            )";
+        $bgStmt = $pdo->prepare($bgSql);
+        $bgStmt->execute($bind);
+        $buyerGiveaways = (int) $bgStmt->fetch()['buyer_giveaways'];
+
+        // Costs for filtered items
+        $costSql = "SELECT COALESCE(SUM(c.cost_amount), 0) AS total_costs
+        FROM CG_ItemCosts c
+        JOIN CG_AuctionLineItems a ON a.ledger_transaction_id = c.ledger_transaction_id
+        LEFT JOIN CG_Buyers b ON b.buyer_id = a.buyer_id
+        {$whereClause}";
+        $costStmt = $pdo->prepare($costSql);
+        $costStmt->execute($bind);
+        $costs = $costStmt->fetch();
 
         // Data
         $offset = ($page - 1) * $perPage;
@@ -117,6 +167,7 @@ class LineItemController
             'per_page' => $perPage,
             'sort'     => $sortKey,
             'order'    => $sortDir,
+            'summary'  => $this->buildSummary($summary, $costs, $buyerGiveaways),
         ]);
     }
 
@@ -203,5 +254,56 @@ class LineItemController
 
         $stmt = cg_db()->query($sql);
         jsonResponse(['data' => $stmt->fetchAll()]);
+    }
+
+    /**
+     * Build the full financial summary from query results.
+     */
+    private function buildSummary(array $summary, array $costs, int $buyerGiveaways): array
+    {
+        $totalSales       = round((float) $summary['total_sales'], 2);
+        $totalEarnings    = round((float) $summary['total_earnings'], 2);
+        $totalItemPrice   = round((float) $summary['total_item_price'], 2);
+        $totalBuyerPaid   = round((float) $summary['total_buyer_paid'], 2);
+        $commission       = round((float) $summary['total_commission'], 2);
+        $processing       = round((float) $summary['total_processing'], 2);
+        $taxCommission    = round((float) $summary['total_tax_commission'], 2);
+        $taxProcessing    = round((float) $summary['total_tax_processing'], 2);
+        $shipping         = round((float) $summary['total_shipping'], 2);
+        $totalFees        = round($commission + $processing + $taxCommission + $taxProcessing + $shipping, 2);
+        $giveawayFees     = round((float) $summary['giveaway_fees'], 2);
+        $auctionFees      = round($totalFees - $giveawayFees, 2);
+        $totalCosts       = round((float) $costs['total_costs'], 2);
+        $giveawayNet      = round((float) $summary['giveaway_net'], 2);
+
+        $profit    = round($totalItemPrice - $totalFees - $totalCosts, 2);
+        $profitPct = ($totalItemPrice > 0) ? round(($profit / $totalItemPrice) * 100, 2) : 0;
+
+        return [
+            'auction_count'       => (int) $summary['auction_count'],
+            'giveaway_count'      => (int) $summary['giveaway_count'],
+            'giveaway_net'        => $giveawayNet,
+            'unique_buyers'       => (int) $summary['unique_buyers'],
+            'unique_shipments'    => (int) $summary['unique_shipments'],
+            'avg_price'           => round((float) $summary['avg_price'], 2),
+            'tip_count'           => (int) $summary['tip_count'],
+            'total_tips'          => round((float) $summary['total_tips'], 2),
+            'buyer_giveaways'     => $buyerGiveaways,
+            'total_item_price'    => $totalItemPrice,
+            'total_buyer_paid'    => $totalBuyerPaid,
+            'total_sales'         => $totalSales,
+            'total_earnings'      => $totalEarnings,
+            'total_shipping'      => $shipping,
+            'commission_fee'      => $commission,
+            'processing_fee'      => $processing,
+            'tax_on_commission'   => $taxCommission,
+            'tax_on_processing'   => $taxProcessing,
+            'total_fees'          => $totalFees,
+            'auction_fees'        => $auctionFees,
+            'giveaway_fees'       => $giveawayFees,
+            'total_costs'         => $totalCosts,
+            'profit'              => $profit,
+            'profit_pct'          => $profitPct,
+        ];
     }
 }

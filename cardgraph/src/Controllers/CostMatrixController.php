@@ -282,18 +282,33 @@ class CostMatrixController
 
         $sql = "SELECT
             COUNT(*) AS total_items,
-            COALESCE(SUM(a.original_item_price), 0) AS total_revenue,
+            SUM(CASE WHEN a.buy_format = 'AUCTION' THEN 1 ELSE 0 END) AS auction_count,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price ELSE 0 END), 0) AS total_item_price,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.buyer_paid ELSE 0 END), 0) AS total_buyer_paid,
             COALESCE(SUM(a.transaction_amount), 0) AS total_earnings,
             COALESCE(SUM(
                 COALESCE(a.commission_fee, 0) +
                 COALESCE(a.payment_processing_fee, 0) +
                 COALESCE(a.tax_on_commission_fee, 0) +
-                COALESCE(a.tax_on_payment_processing_fee, 0)
+                COALESCE(a.tax_on_payment_processing_fee, 0) +
+                COALESCE(a.shipping_fee, 0)
             ), 0) AS total_fees,
-            COALESCE(AVG(a.original_item_price), 0) AS avg_item_price,
+            COALESCE(SUM(COALESCE(a.commission_fee, 0)), 0) AS commission_fee,
+            COALESCE(SUM(COALESCE(a.payment_processing_fee, 0)), 0) AS processing_fee,
+            COALESCE(SUM(COALESCE(a.tax_on_commission_fee, 0)), 0) AS tax_on_commission,
+            COALESCE(SUM(COALESCE(a.tax_on_payment_processing_fee, 0)), 0) AS tax_on_processing,
+            COALESCE(SUM(COALESCE(a.shipping_fee, 0)), 0) AS total_shipping,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN
+                COALESCE(a.commission_fee, 0) + COALESCE(a.payment_processing_fee, 0) +
+                COALESCE(a.tax_on_commission_fee, 0) + COALESCE(a.tax_on_payment_processing_fee, 0) +
+                COALESCE(a.shipping_fee, 0) ELSE 0 END), 0) AS giveaway_fees,
+            COALESCE(AVG(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price END), 0) AS avg_item_price,
             COUNT(DISTINCT a.buyer_id) AS unique_buyers,
+            COUNT(DISTINCT a.shipment_id) AS unique_shipments,
             SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN 1 ELSE 0 END) AS giveaway_count,
-            COALESCE(SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN a.transaction_amount ELSE 0 END), 0) AS giveaway_net
+            COALESCE(SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN a.transaction_amount ELSE 0 END), 0) AS giveaway_net,
+            SUM(CASE WHEN a.transaction_type = 'TIP' THEN 1 ELSE 0 END) AS tip_count,
+            COALESCE(SUM(CASE WHEN a.transaction_type = 'TIP' THEN a.transaction_amount ELSE 0 END), 0) AS total_tips
         FROM CG_AuctionLineItems a
         WHERE a.livestream_id = :ls";
 
@@ -309,20 +324,53 @@ class CostMatrixController
         $costStmt->execute([':ls' => $livestreamId]);
         $costs = $costStmt->fetch();
 
-        $totalEarnings = round((float) $summary['total_earnings'], 2);
-        $totalCosts = round((float) $costs['total_costs'], 2);
+        // Giveaways won by buyers who also purchased
+        $bgSql = "SELECT COUNT(*) AS buyer_giveaways
+            FROM CG_AuctionLineItems a
+            WHERE a.buy_format = 'GIVEAWAY'
+            AND a.livestream_id = :ls
+            AND a.buyer_id IN (
+                SELECT DISTINCT a2.buyer_id FROM CG_AuctionLineItems a2
+                WHERE a2.buy_format = 'AUCTION'
+            )";
+        $bgStmt = $pdo->prepare($bgSql);
+        $bgStmt->execute([':ls' => $livestreamId]);
+        $buyerGiveaways = (int) $bgStmt->fetch()['buyer_giveaways'];
+
+        $totalItemPrice = round((float) $summary['total_item_price'], 2);
+        $totalEarnings  = round((float) $summary['total_earnings'], 2);
+        $totalFees      = round((float) $summary['total_fees'], 2);
+        $totalCosts     = round((float) $costs['total_costs'], 2);
+        $giveawayFees   = round((float) $summary['giveaway_fees'], 2);
+        $auctionFees    = round($totalFees - $giveawayFees, 2);
+        $profit         = round($totalItemPrice - $totalFees - $totalCosts, 2);
+        $profitPct      = ($totalItemPrice > 0) ? round(($profit / $totalItemPrice) * 100, 2) : 0;
 
         jsonResponse([
-            'total_items'    => (int) $summary['total_items'],
-            'total_revenue'  => round((float) $summary['total_revenue'], 2),
-            'total_earnings' => $totalEarnings,
-            'total_fees'     => round((float) $summary['total_fees'], 2),
-            'total_costs'    => $totalCosts,
-            'profit_loss'    => round($totalEarnings - $totalCosts, 2),
-            'avg_item_price' => round((float) $summary['avg_item_price'], 2),
-            'unique_buyers'  => (int) $summary['unique_buyers'],
-            'giveaway_count' => (int) $summary['giveaway_count'],
-            'giveaway_net'   => round((float) $summary['giveaway_net'], 2),
+            'total_items'     => (int) $summary['total_items'],
+            'auction_count'   => (int) $summary['auction_count'],
+            'total_item_price' => $totalItemPrice,
+            'total_buyer_paid' => round((float) $summary['total_buyer_paid'], 2),
+            'total_earnings'  => $totalEarnings,
+            'total_fees'      => $totalFees,
+            'commission_fee'  => round((float) $summary['commission_fee'], 2),
+            'processing_fee'  => round((float) $summary['processing_fee'], 2),
+            'tax_on_commission'  => round((float) $summary['tax_on_commission'], 2),
+            'tax_on_processing'  => round((float) $summary['tax_on_processing'], 2),
+            'total_shipping'  => round((float) $summary['total_shipping'], 2),
+            'giveaway_fees'   => $giveawayFees,
+            'auction_fees'    => $auctionFees,
+            'total_costs'     => $totalCosts,
+            'profit'          => $profit,
+            'profit_pct'      => $profitPct,
+            'avg_item_price'  => round((float) $summary['avg_item_price'], 2),
+            'unique_buyers'   => (int) $summary['unique_buyers'],
+            'unique_shipments' => (int) $summary['unique_shipments'],
+            'giveaway_count'  => (int) $summary['giveaway_count'],
+            'giveaway_net'    => round((float) $summary['giveaway_net'], 2),
+            'buyer_giveaways' => $buyerGiveaways,
+            'tip_count'       => (int) $summary['tip_count'],
+            'total_tips'      => round((float) $summary['total_tips'], 2),
         ]);
     }
 

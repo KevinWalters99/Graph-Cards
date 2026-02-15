@@ -172,15 +172,36 @@ body {
    ============================================================ */
 .page-header {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
     margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 4px 16px;
 }
 
 .page-header h1 {
     font-size: 22px;
     color: #1a1a2e;
     font-weight: 700;
+}
+
+.page-header .filter-description {
+    font-size: 18px;
+    font-weight: 400;
+    color: #666;
+    margin-left: 24px;
+}
+
+.payout-summary {
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.payout-summary-sep {
+    color: #ccc;
+    margin: 0 8px;
 }
 
 /* ============================================================
@@ -225,7 +246,8 @@ body {
 }
 
 .card-sub {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
     color: #999;
     margin-top: 4px;
 }
@@ -253,18 +275,83 @@ body {
     margin-top: 2px;
 }
 
+/* Dashboard scorecard color scheme */
+.val-count    { color: #1a3a6b; }          /* Dark Blue — count values */
+.val-income   { color: #1b6e2e; }          /* Dark Green — income (earnings, tips) */
+.val-expense  { color: #7a4a1a; }          /* Dark Brown — revenue reducers (costs, fees) */
+.val-negative { color: #8b1a1a; }          /* Dark Red — negative numbers */
+.val-buyer    { color: #0d7377; }          /* Teal — buyer names */
+
+/* Scorecard sub-text: val-* spans are bold and slightly larger */
+.card-sub .val-count,
+.card-sub .val-income,
+.card-sub .val-expense,
+.card-sub .val-negative,
+.card-sub .val-buyer {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+/* Dashboard grouped card layout */
+.cards-row {
+    display: flex;
+    align-items: start;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.cards-row .cards-group {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+/* Scorecard compact styling (shared by cards-group and cards-value-cols) */
+.cards-row .cards-group .card,
+.cards-row .cards-value-cols .card {
+    padding: 12px 14px;
+}
+.cards-row .cards-group .card-label,
+.cards-row .cards-value-cols .card-label {
+    margin-bottom: 4px;
+    font-size: 11px;
+}
+.cards-row .cards-group .card-value,
+.cards-row .cards-value-cols .card-value {
+    font-size: 20px;
+}
+.cards-row .cards-group .card-sub,
+.cards-row .cards-value-cols .card-sub {
+    margin-top: 2px;
+}
+
+/* Values paired-column layout (vertical stacking within each column) */
+.cards-value-cols {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+    align-items: start;
+}
+.cards-value-cols .cards-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 /* ============================================================
    Filter Bar
    ============================================================ */
 .filter-bar {
     display: flex;
     align-items: flex-end;
-    gap: 12px;
+    justify-content: flex-end;
+    gap: 8px;
     flex-wrap: wrap;
     background: #fff;
-    padding: 16px 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     border: 1px solid #e8eaed;
 }
@@ -272,11 +359,11 @@ body {
 .filter-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .filter-group label {
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     color: #888;
     font-weight: 600;
@@ -285,10 +372,10 @@ body {
 
 .filter-group input,
 .filter-group select {
-    padding: 8px 12px;
+    padding: 3px 6px;
     border: 1px solid #ddd;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     outline: none;
     transition: border-color 0.2s;
 }
@@ -299,15 +386,51 @@ body {
 }
 
 .filter-group input[type="date"] {
-    min-width: 150px;
+    min-width: 110px;
 }
 
 .filter-group select {
-    min-width: 140px;
+    min-width: 120px;
 }
 
 .filter-group input[type="text"] {
-    min-width: 180px;
+    min-width: 150px;
+}
+
+.filter-group:last-child {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.filter-group:last-child label {
+    display: none;
+}
+
+.filter-bar .btn {
+    padding: 3px 10px;
+    font-size: 11px;
+}
+
+.filter-bar .btn-primary {
+    background: #1a3a6b;
+    border-color: #1a3a6b;
+}
+
+.filter-bar .btn-primary:hover {
+    background: #15305a;
+    border-color: #15305a;
+}
+
+.filter-bar .btn-secondary {
+    background: #d4930d;
+    border-color: #d4930d;
+    color: #fff;
+}
+
+.filter-bar .btn-secondary:hover {
+    background: #b87e0b;
+    border-color: #b87e0b;
 }
 
 /* ============================================================
@@ -934,4 +1057,217 @@ body {
 .cm-buttons {
     display: flex;
     gap: 8px;
+}
+
+/* ============================================================
+   Analytics — Charts & Summary
+   ============================================================ */
+.chart-container {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #e8eaed;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    max-height: 380px;
+}
+
+.analytics-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.analytics-summary-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #e8eaed;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analytics-summary-card .metric-name {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #888;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.analytics-summary-card .metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.analytics-summary-card .metric-trend {
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.analytics-summary-card .sparkline-container {
+    height: 40px;
+    margin-top: 4px;
+}
+
+.analytics-summary-card .sparkline-container canvas {
+    width: 100% !important;
+    height: 40px !important;
+}
+
+.trend-arrow {
+    display: inline-flex;
+    align-items: center;
+    font-weight: 700;
+}
+
+.trend-up    { color: #2e7d32; }
+.trend-down  { color: #c62828; }
+.trend-flat  { color: #888; }
+
+/* ============================================================
+   Analytics — Pacing Cards & Progress Bars
+   ============================================================ */
+.pacing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.analytics-pacing-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #e8eaed;
+}
+
+.analytics-pacing-card .pacing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.analytics-pacing-card .pacing-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.analytics-pacing-card .pacing-window {
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+}
+
+.pacing-bar {
+    height: 8px;
+    background: #e8eaed;
+    border-radius: 4px;
+    overflow: visible;
+    position: relative;
+    margin: 12px 0;
+}
+
+.pacing-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    min-width: 2px;
+}
+
+.pacing-bar-target {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 16px;
+    background: #333;
+    border-radius: 1px;
+}
+
+.pacing-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #666;
+}
+
+.pacing-stats .pacing-actual {
+    font-weight: 600;
+}
+
+.pacing-stats .pacing-target {
+    color: #888;
+}
+
+/* Pacing status badges */
+.pacing-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.pacing-exceeded  { background: #e8f5e9; color: #2e7d32; }
+.pacing-achieved  { background: #e8f5e9; color: #2e7d32; }
+.pacing-on-track  { background: #e3f2fd; color: #1565c0; }
+.pacing-at-risk   { background: #fff3e0; color: #ef6c00; }
+.pacing-behind    { background: #fce4ec; color: #c62828; }
+
+/* Pacing bar fill colors by status */
+.pacing-bar-fill.pacing-exceeded  { background: #2e7d32; }
+.pacing-bar-fill.pacing-achieved  { background: #2e7d32; }
+.pacing-bar-fill.pacing-on-track  { background: #1565c0; }
+.pacing-bar-fill.pacing-at-risk   { background: #ef6c00; }
+.pacing-bar-fill.pacing-behind    { background: #c62828; }
+
+.pacing-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.pacing-forecast {
+    font-size: 11px;
+    color: #888;
+}
+
+.pacing-time {
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.pacing-sep {
+    color: #ccc;
+    margin: 0 2px;
+}
+
+/* ============================================================
+   Analytics — Data Table within tab
+   ============================================================ */
+.analytics-data-section {
+    margin-top: 24px;
+}
+
+.analytics-data-section .section-title {
+    margin-bottom: 12px;
 }

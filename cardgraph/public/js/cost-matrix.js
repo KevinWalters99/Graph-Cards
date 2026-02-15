@@ -175,56 +175,117 @@ var CostMatrix = {
         }
 
         API.get('/api/cost-matrix/auction-summary', { livestream_id: livestreamId }).then(function(result) {
-            var profitClass = result.profit_loss >= 0 ? 'positive' : 'negative';
+            var cur = App.formatCurrency;
+            var profitClass = (result.profit || 0) >= 0 ? 'val-income' : 'val-negative';
+            var pctClass = (result.profit_pct || 0) >= 0 ? 'val-income' : 'val-negative';
             var parts = [];
-            parts.push('<div class="cards-grid cards-compact" style="margin-top:12px;">');
+
+            // Counts (left) | Values (right)
+            parts.push('<div class="cards-row" style="margin-top:12px;">');
+
+            // Counts group
+            parts.push('<div class="cards-group" style="flex:0 0 auto;grid-template-columns:repeat(3,1fr);">');
 
             parts.push('<div class="card">');
-            parts.push('<div class="card-label">Items</div>');
-            parts.push('<div class="card-value">' + result.total_items + '</div>');
-            parts.push('</div>');
-
-            parts.push('<div class="card">');
-            parts.push('<div class="card-label">Buyers</div>');
-            parts.push('<div class="card-value">' + result.unique_buyers + '</div>');
+            parts.push('<div class="card-label">Items Sold</div>');
+            parts.push('<div class="card-value val-count">' + (result.auction_count || 0) + '</div>');
+            parts.push('<div class="card-sub">Avg price: <span class="val-income">' + cur(result.avg_item_price) + '</span></div>');
             parts.push('</div>');
 
             parts.push('<div class="card">');
             parts.push('<div class="card-label">Giveaways</div>');
-            parts.push('<div class="card-value">' + result.giveaway_count + '</div>');
-            parts.push('<div class="card-sub">' + App.formatCurrency(result.giveaway_net) + ' net</div>');
+            parts.push('<div class="card-value val-count">' + result.giveaway_count + '</div>');
+            parts.push('<div class="card-sub"><span class="val-count">' + result.buyer_giveaways + '</span> buyer giveaways</div>');
             parts.push('</div>');
 
             parts.push('<div class="card">');
-            parts.push('<div class="card-label">Revenue</div>');
-            parts.push('<div class="card-value">' + App.formatCurrency(result.total_revenue) + '</div>');
+            parts.push('<div class="card-label">Buyers</div>');
+            parts.push('<div class="card-value val-buyer">' + result.unique_buyers + '</div>');
             parts.push('</div>');
 
             parts.push('<div class="card">');
-            parts.push('<div class="card-label">Earnings</div>');
-            parts.push('<div class="card-value">' + App.formatCurrency(result.total_earnings) + '</div>');
+            parts.push('<div class="card-label">Shipments</div>');
+            parts.push('<div class="card-value val-count">' + (result.unique_shipments || 0) + '</div>');
             parts.push('</div>');
 
             parts.push('<div class="card">');
-            parts.push('<div class="card-label">Fees</div>');
-            parts.push('<div class="card-value">' + App.formatCurrency(result.total_fees) + '</div>');
+            parts.push('<div class="card-label">Tips</div>');
+            parts.push('<div class="card-value val-count">' + (result.tip_count || 0) + '</div>');
+            parts.push('<div class="card-sub"><span class="val-income">' + cur(result.total_tips) + '</span></div>');
             parts.push('</div>');
 
+            parts.push('</div>');
+
+            // Values group — paired vertical columns
+            parts.push('<div class="cards-value-cols">');
+
+            // Col 1: Buyer Paid / Giveaway Expense
+            parts.push('<div class="cards-col">');
             parts.push('<div class="card">');
-            parts.push('<div class="card-label">Costs</div>');
-            parts.push('<div class="card-value">' + App.formatCurrency(result.total_costs) + '</div>');
+            parts.push('<div class="card-label">Buyer Paid</div>');
+            parts.push('<div class="card-value val-count">' + cur(result.total_buyer_paid) + '</div>');
+            parts.push('<div class="card-sub">Includes shipping &amp; tax</div>');
             parts.push('</div>');
-
             parts.push('<div class="card">');
-            parts.push('<div class="card-label">Profit / Loss</div>');
-            parts.push('<div class="card-value ' + profitClass + '">' + App.formatCurrency(result.profit_loss) + '</div>');
+            parts.push('<div class="card-label">Giveaway Expense</div>');
+            parts.push('<div class="card-value val-negative">' + cur(result.giveaway_net) + '</div>');
+            parts.push('<div class="card-sub">Included in Shipping fee</div>');
+            parts.push('</div>');
             parts.push('</div>');
 
+            // Col 2: Payout Amount
+            parts.push('<div class="cards-col">');
             parts.push('<div class="card">');
-            parts.push('<div class="card-label">Avg Price</div>');
-            parts.push('<div class="card-value">' + App.formatCurrency(result.avg_item_price) + '</div>');
+            parts.push('<div class="card-label">Payout Amount</div>');
+            var payoutClass = (result.total_earnings || 0) >= 0 ? 'val-income' : 'val-negative';
+            parts.push('<div class="card-value ' + payoutClass + '">' + cur(result.total_earnings) + '</div>');
+            parts.push('<div class="card-sub">Total Sales less expenses</div>');
+            parts.push('</div>');
             parts.push('</div>');
 
+            // Col 3: Total Sales / Total Fees
+            parts.push('<div class="cards-col">');
+            parts.push('<div class="card">');
+            parts.push('<div class="card-label">Total Sales</div>');
+            parts.push('<div class="card-value val-income">' + cur(result.total_item_price) + '</div>');
+            parts.push('<div class="card-sub">SUM of Item Price (Auction)<br>Includes Tips</div>');
+            parts.push('</div>');
+            parts.push('<div class="card">');
+            parts.push('<div class="card-label">Total Fees</div>');
+            parts.push('<div class="card-value val-expense">' + cur(result.total_fees) + '</div>');
+            parts.push('<div class="card-sub">');
+            parts.push('Commission: ' + cur(result.commission_fee) + '<br>');
+            parts.push('Processing: ' + cur(result.processing_fee) + '<br>');
+            parts.push('Shipping: ' + cur(result.total_shipping) + '<br>');
+            parts.push('Tax on Commission: ' + cur(result.tax_on_commission) + '<br>');
+            parts.push('Tax on Processing: ' + cur(result.tax_on_processing) + '<br>');
+            parts.push('<span style="border-top:1px solid #ddd;display:block;margin-top:4px;padding-top:4px;">');
+            parts.push('Auction fees: ' + cur(result.auction_fees) + ' &bull; Giveaway fees: ' + cur(result.giveaway_fees));
+            parts.push('</span>');
+            parts.push('</div>');
+            parts.push('</div>');
+            parts.push('</div>');
+
+            // Col 4: Item Costs / Profit / Profit %
+            parts.push('<div class="cards-col">');
+            parts.push('<div class="card">');
+            parts.push('<div class="card-label">Item Costs</div>');
+            parts.push('<div class="card-value val-expense">' + cur(result.total_costs) + '</div>');
+            parts.push('<div class="card-sub">Includes Card, Mags, additional shipping</div>');
+            parts.push('</div>');
+            parts.push('<div class="card">');
+            parts.push('<div class="card-label">Profit</div>');
+            parts.push('<div class="card-value ' + profitClass + '">' + cur(result.profit) + '</div>');
+            parts.push('<div class="card-sub">Sales ' + cur(result.total_item_price) + ' - Fees ' + cur(result.total_fees) + ' (incl ' + cur(result.giveaway_fees) + ' giveaway) - Costs ' + cur(result.total_costs) + '</div>');
+            parts.push('</div>');
+            parts.push('<div class="card">');
+            parts.push('<div class="card-label">Profit %</div>');
+            parts.push('<div class="card-value ' + pctClass + '">' + (result.profit_pct || 0).toFixed(1) + '%</div>');
+            parts.push('<div class="card-sub">Profit / Total Sales</div>');
+            parts.push('</div>');
+            parts.push('</div>');
+
+            parts.push('</div>');
             parts.push('</div>');
             container.innerHTML = parts.join('\n');
         }).catch(function(err) {

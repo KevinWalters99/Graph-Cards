@@ -63,6 +63,9 @@ class UploadController
                 'rows_skipped'  => $result['rows_skipped'],
             ]);
 
+            // Normalize listing titles (pad # numbers to 4 digits)
+            $this->normalizeTitles();
+
             jsonResponse([
                 'upload_id'     => $uploadId,
                 'filename'      => $originalName,
@@ -172,6 +175,42 @@ class UploadController
         if ($file['size'] > $uploadConfig['max_size_bytes']) {
             $maxMB = round($uploadConfig['max_size_bytes'] / 1048576, 1);
             jsonError("File too large. Maximum size: {$maxMB} MB", 400);
+        }
+    }
+
+    /**
+     * Bulk-normalize listing titles: pad #N to 4 digits.
+     * Idempotent — safe to run on every import.
+     */
+    private function normalizeTitles(): void
+    {
+        $pdo = cg_db();
+
+        $stmt = $pdo->query(
+            "SELECT ledger_transaction_id, listing_title
+             FROM CG_AuctionLineItems
+             WHERE listing_title REGEXP '#[0-9]{1,3}([^0-9]|$)'"
+        );
+        $rows = $stmt->fetchAll();
+
+        if (empty($rows)) {
+            return;
+        }
+
+        $update = $pdo->prepare(
+            "UPDATE CG_AuctionLineItems
+             SET listing_title = :title
+             WHERE ledger_transaction_id = :id"
+        );
+
+        foreach ($rows as $row) {
+            $normalized = normalizeTitle($row['listing_title']);
+            if ($normalized !== $row['listing_title']) {
+                $update->execute([
+                    ':title' => $normalized,
+                    ':id'    => $row['ledger_transaction_id'],
+                ]);
+            }
         }
     }
 

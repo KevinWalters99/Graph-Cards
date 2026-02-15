@@ -1,0 +1,35 @@
+Dashboard UI & Logic Updates
+1. Scorecard Redesign & Organization
+Resize & Grouping: Reduce the overall size of the scorecards to save screen real estate. Group them by their primary metric:
+
+Left Side: All "Count-based" scorecards.  Apply the distinct color-coding scheme
+
+Right Side: All "Dollar-based" scorecards.  Apply the distinct color-coding scheme
+
+Top Buyers (Item Count): * Apply the distinct color-coding scheme
+
+Ensure both the total item count and the buyer's ID/number are visible.
+
+Top Buyers (Dollar Amount): * Create a new set of three scorecards following the same theme as the "Item Count" cards, but focusing on total spend.
+
+Apply the distinct color-coding scheme
+
+Include the item count as a secondary metric on these cards.
+
+2. "Earnings by Livestream" Table Enhancements
+Sorting: Enable multi-column sorting for the table so users can organize data as needed.
+
+Table Metadata: Add a "Record Count" indicator to show the total number of entries currently in the table.
+
+DISTINCT COLOR-CODING SCHEME
+
+Score Card Dollar value TEXT color scheme
+Negative numbers    Dark Red
+Positive numbers that are income based (Value, Tips, Earnings) Dark Green
+Revenue impact numbers that reduce income (Costs, Fees, Shipping, Expenses, Net Expenses) Dark brown
+
+Score Card Count value TEXT color scheme 
+Count values Should be Dark Blue
+
+Score Card "Top Buyers" value TEXT color scheme
+Score cards specific to a Buyer with user ID included   Teal

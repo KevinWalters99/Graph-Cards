@@ -138,3 +138,17 @@ function buildPaginatedQuery(string $baseQuery, array $conditions, string $order
         'params'     => $params,
     ];
 }
+
+/**
+ * Normalize a listing title by padding numbers after # to 4 digits.
+ * e.g., "#1" -> "#0001", "#13" -> "#0013", "#134" -> "#0134"
+ */
+function normalizeTitle(?string $title): ?string
+{
+    if ($title === null || $title === '') {
+        return $title;
+    }
+    return preg_replace_callback('/#(\d{1,3})(?=\D|$)/', function ($m) {
+        return '#' . str_pad($m[1], 4, '0', STR_PAD_LEFT);
+    }, $title);
+}

@@ -14,7 +14,7 @@ var Ebay = {
         if (!this.initialized) {
             panel.innerHTML = [
                 '<div class="page-header">',
-                '    <h1>eBay Transactions</h1>',
+                '    <h1>eBay Transactions <span id="ebay-filter-desc" class="filter-description"></span></h1>',
                 '    <button class="btn btn-primary" id="ebay-import-btn">Import Emails</button>',
                 '</div>',
                 '<div id="ebay-summary-cards" class="cards-grid"></div>',
@@ -23,8 +23,6 @@ var Ebay = {
             ].join('\n');
 
             Filters.render(document.getElementById('ebay-filters'), [
-                { type: 'date', name: 'date_from', label: 'From Date' },
-                { type: 'date', name: 'date_to', label: 'To Date' },
                 {
                     type: 'select', name: 'source', label: 'Source',
                     options: [
@@ -46,7 +44,10 @@ var Ebay = {
                     ]
                 },
                 { type: 'text', name: 'search', label: 'Search', placeholder: 'Order #, seller...' },
-            ], function(f) { Ebay.filters = f; Ebay.page = 1; Ebay.loadData(); });
+                { type: 'date', name: 'date_from', label: 'From Date' },
+                { type: 'date', name: 'date_to', label: 'To Date' },
+            ], function(f) { Ebay.filters = f; Ebay.page = 1; Ebay.loadData(); },
+            { descriptionEl: 'ebay-filter-desc' });
 
             document.getElementById('ebay-import-btn').addEventListener('click', function() {
                 Ebay.runImport();
@@ -85,28 +86,28 @@ var Ebay = {
             cards.innerHTML = [
                 '<div class="card">',
                 '    <div class="card-label">Total Spent</div>',
-                '    <div class="card-value">' + App.formatCurrency(s.total_spent) + '</div>',
-                '    <div class="card-sub">' + s.total_orders + ' orders</div>',
+                '    <div class="card-value val-expense">' + App.formatCurrency(s.total_spent) + '</div>',
+                '    <div class="card-sub"><span class="val-count">' + s.total_orders + '</span> orders</div>',
                 '</div>',
                 '<div class="card">',
                 '    <div class="card-label">Total Items</div>',
-                '    <div class="card-value">' + s.total_items + '</div>',
+                '    <div class="card-value val-count">' + s.total_items + '</div>',
                 '</div>',
                 '<div class="card">',
                 '    <div class="card-label">Shipping</div>',
-                '    <div class="card-value">' + App.formatCurrency(s.total_shipping) + '</div>',
+                '    <div class="card-value val-expense">' + App.formatCurrency(s.total_shipping) + '</div>',
                 '</div>',
                 '<div class="card">',
                 '    <div class="card-label">Tax</div>',
-                '    <div class="card-value">' + App.formatCurrency(s.total_tax) + '</div>',
+                '    <div class="card-value val-expense">' + App.formatCurrency(s.total_tax) + '</div>',
                 '</div>',
                 '<div class="card">',
                 '    <div class="card-label">Delivered</div>',
-                '    <div class="card-value">' + s.delivered_count + '</div>',
+                '    <div class="card-value val-count">' + s.delivered_count + '</div>',
                 '</div>',
                 '<div class="card">',
                 '    <div class="card-label">Sellers</div>',
-                '    <div class="card-value">' + s.unique_sellers + '</div>',
+                '    <div class="card-value val-count">' + s.unique_sellers + '</div>',
                 '</div>',
             ].join('\n');
         }).catch(function(err) {

@@ -1,0 +1,17 @@
+Project Update: Upload Process & Data Normalization
+1. Button Relocation
+Please move the "Upload Earnings" button. It should be removed from the Dashboard and relocated to the Items and Cost tab.
+
+2. Post-Import Normalization Logic
+Currently, the "Upload Earnings" button performs a standard import. I would like to update this process so that once the import completes, the system automatically runs a normalization script on the titles (for both standard items and giveaways).
+
+3. Title Padding Requirements
+Almost all titles include a number sign (#) followed by a value. To ensure the titles sort correctly, we need to pad these values with leading zeros to the thousands place.
+
+3-digit values: Add one leading zero (e.g., #134 becomes #0134).
+
+2-digit values: Add two leading zeros (e.g., #13 becomes #0013).
+
+1-digit values: Add three leading zeros (e.g., #1 becomes #0001).
+
+Goal: This change will allow the system to sort titles numerically and alphabetically in the correct order.

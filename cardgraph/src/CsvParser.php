@@ -212,7 +212,7 @@ class CsvParser
             ':order_id'      => !empty($orderId) ? $orderId : null,
             ':txn_type'      => trim($data['TRANSACTION_TYPE']),
             ':txn_msg'       => trim($data['TRANSACTION_MESSAGE']),
-            ':title'         => trim($data['LISTING_TITLE']) ?: null,
+            ':title'         => normalizeTitle(trim($data['LISTING_TITLE']) ?: null),
             ':description'   => trim($data['LISTING_DESCRIPTION']) ?: null,
             ':category'      => trim($data['PRODUCT_CATEGORY']) ?: null,
             ':buy_format'    => $buyFormat,

@@ -1,0 +1,44 @@
+SCORECARD LAYOUT RULES
+Like scorecards keep together.
+Scorecards with Counts as the primary metric stay to the left and only 3 cards wide
+Scorecards with Values as the primary metric stay to the right
+Scorecard size should stay consistent
+A Scorecard can grow to accommodate the notes.
+Blue and Red values should be to the left of the Values group
+	Buyer Paid then below Giveaway Expense
+Payout Amount then below Actual Total Payouts (small notice icon if there is a In Progress entry)
+Total Sales then below Total Fees
+Item Costs then below Profit then below Profit %
+All of the Buyer information should run straight across the screen in the following order and can be wider to accommodate the info without getting taller for no reason
+Top Buyers (Item Count)  Last Stream then last month then current year
+Top Buyers (Total Spend) Last Stream then last month then current year
+
+
+DISTINCT COLOR-CODING SCHEME
+All Score Card Text Values and Counts to be Bold and 3 font size above general score card font
+All Score Card subtitle values and counts to be Bold and 1 font size above general score card font
+
+Score Card Dollar value TEXT color scheme  (To be applied in sequence)
+1 Negative numbers (Giveaway values, negative net expenses)  Dark Red
+2 Positive numbers that are income based (Value, Tips, Earnings)  Dark Green
+3 Revenue impact numbers that reduce income (Costs, Fees, Shipping, Expenses, Net Expenses)  Dark brown
+
+Score Card Count value TEXT color scheme 
+Count values Should be Dark Blue
+
+Score Card "Top Buyers" value TEXT color scheme
+Score cards specific to a Buyer with user ID included   Teal
+
+
+
+FILTER BAR RULE
+Any Table Filter Bar should have the Apply and Reset next to each other and reduce the size overall and right justify the items to minimize screen space usage.
+The Date Picker  From Date and To Date should always be closest to the Apply and Reset buttons
+The Apply button should be  Dark Blue
+The Reset button should be  Amber
+
+
+PAGE TITLE RULES
+Any page that contains a table with filter the Title on the page should:
+A tabbed space from the title show the filter description currently applied
+The Filter description should be 1 font size smaller than the title font size.

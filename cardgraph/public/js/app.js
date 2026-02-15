@@ -71,6 +71,9 @@ const App = {
             case 'ebay':
                 Ebay.init();
                 break;
+            case 'analytics':
+                Analytics.init();
+                break;
             case 'maintenance':
                 Maintenance.init();
                 break;
