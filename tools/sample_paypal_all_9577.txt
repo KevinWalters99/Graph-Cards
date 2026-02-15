@@ -1,0 +1,63 @@
+FROM: "service@paypal.com" <service@paypal.com>
+SUBJECT: eBay Commerce Inc.: $574.30 USD
+DATE: Sat, 14 Feb 2026 07:37:13 -0800
+============================================================
+eBay Commerce Inc.: $574.30 USD
+Track your purchase from this email.
+Hello, Collin Walters
+You authorized $574.30 USD to eBay Commerce Inc.
+Merchant
+eBay Commerce Inc.
+https://eBay.com/hel...
+Transaction date
+Feb 14, 2026
+Order ID
+v2_276e1102-f8ab-49d8-8838-524765d26ffa_2_19
+Ship to
+Collin walters
+940 Woodlawn St
+Hoffman Estates, IL 60169-1643
+United States
+Track Package
+Purchase amount
+Qty: 1
+$574.30
+Subtotal
+$574.30
+Total
+$574.30 USD
+Authorized with
+CHASE
+Credit ••1615
+$574.30 USD
+You’ll see this purchase as pending in your payment status until eBay Commerce Inc. processes it. We'll send you another receipt if the final payment amount is greater than this authorization amount.
+Transaction ID: 36M45852UA263420T
+View payment status
+Need some help?
+Contact eBay Commerce Inc. for questions or issues with this purchase.
+Email
+Still need help?
+Visit the PayPal Help Center
+New
+Track all your subscriptions in one place
+Manage and update all your subs at once using the PayPal App.
+Get Started
+Your payment was sent from collinwalters123@yahoo.com
+Help & Contact
+|
+Security
+|
+Apps
+ADDITIONAL INFORMATION
+You have the right to cancel a transaction for a full refund unless your designated recipient has already received the payment.  However, since most PayPal payments are received within seconds, you may not be able to cancel your payment for a full refund once the payment is made. To determine whether your payment is eligible for cancellation, log in to PayPal.com, select the transaction in your transaction details, and select Cancel, or call PayPal Customer Service at 888-221-1161. Disputes related to purchases are addressed in PayPal’s User Agreement.
+PayPal is committed to preventing fraudulent emails. Emails from PayPal will always contain your full name.
+Learn to identify phishing
+Please don't reply to this email. To get in touch with us, click
+Help & Contact
+.
+PayPal Customer Service can be reached at 888-221-1161.
+PayPal, Inc. NMLS ID #: 910457
+Not sure why you received this email?
+Learn more
+Copyright © 1999-2026 PayPal, Inc. All rights reserved. PayPal is located at 2211 N. First St., San Jose, CA 95131.
+PayPal RT002952:en_US(en-US):1.2.0:bd47e9b337f58

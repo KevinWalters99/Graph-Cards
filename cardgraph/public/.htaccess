@@ -1,0 +1,23 @@
+RewriteEngine On
+RewriteBase /
+
+# If the request is for an existing file or directory, serve it directly
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route all /api/* requests to index.php
+RewriteRule ^api/(.*)$ index.php [QSA,L]
+
+# For SPA: route non-file, non-api requests to app.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteRule ^(.*)$ app.html [QSA,L]
+
+# Deny access to hidden files
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes

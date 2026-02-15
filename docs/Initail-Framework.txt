@@ -1,0 +1,77 @@
+I would like to design the framework for a new hobby-based project focused on auctioning cards. The goal is to build an isolated application hosted entirely within my Synology NAS environment, using only native Synology applications and services wherever possible.
+The application must allow me to upload auction site statements (such as earnings CSV files) that include detailed transactional data. This data should capture:
+•	Item-level sales details
+•	Amount paid
+•	Date of transaction
+•	Fees and costs
+•	Any additional auction-related attributes
+The system must ingest and normalize this data for storage, reporting, and analysis.
+________________________________________
+Application Structure
+The application should use a left-side tabbed navigation layout with three primary sections:
+1.	Dashboard
+o	High-level summary of uploaded statements
+o	Aggregated earnings, fees, totals, and trends
+o	Date-range filtering (required)
+2.	Item-Level Cost & Sales Entry
+o	Ability to input or adjust cost basis by individual sales item
+o	Line-item visibility per auction record
+o	Sorting and filtering across all major attributes
+o	Always include date filtering
+3.	General Maintenance
+o	Data corrections
+o	Status management
+o	System-level administration functions
+________________________________________
+Database Requirements
+•	Use the native SQL database available on the Synology NAS.
+•	The database must be isolated specifically for this application.
+•	All tables must follow a strict naming convention:
+CG_<TablePurpose>
+Examples:
+o	CG_Auctions
+o	CG_AuctionLineItems
+o	CG_EarningsStatements
+o	CG_ItemCosts
+o	CG_StatusTypes
+Consistency in naming is mandatory.
+________________________________________
+Data & Timestamp Requirements
+•	All timestamps must be stored in a way that provides traceability.
+•	The system must standardize all times to Central Standard Time (CST).
+•	Any date fields ingested as text must be normalized into a proper SQL date format to allow:
+o	Sorting
+o	Filtering
+o	Calculations
+Date filtering is paramount and must be available across all major views.
+________________________________________
+Status Tracking & Traceability
+Each auction line item must support detailed status tracking, including (but not limited to):
+•	Completed
+•	Cancelled
+•	Refused
+•	Did Not Pay
+•	Returned
+•	Any other applicable auction-related status
+All statuses must:
+•	Be sortable
+•	Be filterable
+•	Maintain historical traceability
+________________________________________
+CSV Upload Requirements
+The system must allow uploading of an earnings CSV file covering a specific weekly time frame.
+•	The CSV file name will include date information in the title.
+•	The last portion of the filename will always follow the rule: earnings.csv.
+•	The filename should be parsed to extract the relevant date information.
+•	The CSV will contain extensive transactional data.
+I will provide a sample earnings CSV file to define the structure for ingestion and normalization.
+________________________________________
+We need a table for inputting Payout amounts that is sortable and filterable
+Fields:  Amount, Destination, Date Initiated, Arrival Date, Status (In Progress, Failed, Completed)
+We also need a CSV upload for this table as well
+The dates will need to be normalized from TEXT version.
+
+________________________________________
+
+Overall, the goal is to create a structured, traceable, sortable, and filterable auction tracking system hosted entirely within the Synology NAS ecosystem, using native SQL and consistent data governance practices throughout.
+We need to keep Security in mind.  We need to have passwords to access and use the site.

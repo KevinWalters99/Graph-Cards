@@ -1,0 +1,48 @@
+I need to create a Financial Summary tab with the following structure and rules:
+
+1. Summary Overview Section make this a tab within the Financial Summary page
+
+This tab should include a high-level summary page that provides annual totals for every column containing numeric values.
+
+Only include records with statuses such as Completed, Accepted, Pending, or other positive/active statuses.
+
+Exclude any records marked as Canceled, Negative Impact, or similar non-active statuses from all calculations.
+
+Do not count canceled or negative-impact auctions in totals or auction counts.
+
+All summaries should strictly reflect valid, active transactions.
+
+2. Yearly Summary Table
+
+Create one table that shows totals grouped by Year.
+This should summarize all applicable numeric columns based on the filtering rules above.
+
+3. Year-by-Quarter Summary Table
+
+Create a second table grouped by Year and Quarter:
+
+Q1: January–March
+
+Q2: April–June
+
+Q3: July–September
+
+Q4: October–December
+
+This will allow tracking performance both at a high-level annual view and at a more detailed quarterly level.
+
+Additional Tab: General Costs
+
+Create a separate tab titled General Costs make this a tab within the Financial Summary page with a table that includes the following input fields:
+
+Date
+Description
+Amount
+Quantity
+Total (Quantity × Amount) — auto-calculated
+Distribution Checkbox — determines whether the cost:
+Is distributed across units within the selected time frame, or
+
+Is applied as a lump-sum add-on for the selected period.
+
+I will revisit this financial summary structure later to expand it further, but this establishes the foundational reporting and cost-tracking framework.

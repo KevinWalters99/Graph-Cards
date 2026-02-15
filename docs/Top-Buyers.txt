@@ -1,0 +1,34 @@
+Please add a new tab on the left-hand side called “Top Buyers.”
+
+This tab should be selectable by Live Stream, with the selected stream displayed alongside a concatenated date. In the dropdown label, include the following elements separated by hyphens:
+
+Live Stream – Date – Auction – Total Number of Auctions
+
+Within the Top Buyers tab, display a table that includes the following information for each buyer:
+
+Number of auctions won
+
+Total quantity of items won
+
+Total earnings (revenue)
+
+Total costs
+
+The table should be sortable by all columns. By default, it should be sorted by number of items won, in descending order (highest to lowest), so the buyers who purchased the most appear at the top.
+
+Additionally, include giveaways in the data. Buyers who only received giveaways (and did not purchase items) should appear at the bottom of the list. The primary focus should be on purchasers first, followed by giveaway-only recipients at the end.
+
+
+
+I need to update the Top Buyers – Select Live Stream dropdown options.
+
+The dropdown should allows selection of:
+
+All Streams
+This Year
+Last Year
+This Month
+Last Month
+This Quarter
+
+These new options should allow users to filter the top buyers based on those specific time periods.

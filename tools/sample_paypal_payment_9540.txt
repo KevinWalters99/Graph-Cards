@@ -1,0 +1,43 @@
+FROM: "service@paypal.com" <service@paypal.com>
+SUBJECT: You sent a $400.00 USD payment
+DATE: Fri, 13 Feb 2026 23:04:30 -0800
+============================================================
+You sent a $400.00 USD payment
+Collin Walters, here's your receipt.
+Hello, Collin Walters
+You sent $400.00 USD to Nicholas Sass
+Transaction Details
+Transaction ID
+4H522752GM516635C
+Transaction date
+February 13, 2026
+Money sent
+$400.00 USD
+Fee
+$0.00 USD
+Paid with:
+JPMORGAN CHASE BANK, NA
+$400.00 USD
+You paid
+$400.00 USD
+Nicholas Sass will receive
+$400.00 USD
+Get the Details
+Help & Contact
+|
+Security
+|
+Apps
+ADDITIONAL INFORMATION
+You have the right to cancel a transaction for a full refund unless your designated recipient has already received the payment.  However, since most PayPal payments are received within seconds, you may not be able to cancel your payment for a full refund once the payment is made. To determine whether your payment is eligible for cancellation, log in to PayPal.com, select the transaction in your transaction details, and select Cancel, or call PayPal Customer Service at 888-221-1161. Disputes related to purchases are addressed in PayPal’s User Agreement.
+PayPal is committed to preventing fraudulent emails. Emails from PayPal will always contain your full name.
+Learn to identify phishing
+Please don't reply to this email. To get in touch with us, click
+Help & Contact
+.
+PayPal Customer Service can be reached at 888-221-1161.
+PayPal, Inc. NMLS ID #: 910457
+Not sure why you received this email?
+Learn more
+Copyright © 1999-2026 PayPal, Inc. All rights reserved. PayPal is located at 2211 N. First St., San Jose, CA 95131.
+PayPal RT000417:en_US(en-US):1.9.2:f2394b29b29f1

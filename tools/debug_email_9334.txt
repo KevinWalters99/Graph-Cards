@@ -1,0 +1,290 @@
+0: ETA: Tue, Feb 17 - Sat, Feb 21. Look out for an update with the shipping confirmation.
+1: ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌ ͏‌
+2: Thanks for shopping! Your order is confirmed.
+3: View order details
+4: Browse deals
+5: Your order will ship to:
+6: Collin walters
+7: 940 Woodlawn St
+8: Hoffman Estates, 60169-1643 IL
+9: United States
+10: Estimated delivery:
+11: Tue, Feb 17 - Sat, Feb 21
+12: Your order details
+13: We’ve got your order and will let you know when it ships. If your items are sent in different shipments, you’ll receive multiple shipping updates from us.
+14: 2025 Bowman Chrome Mega Box Kristian Campbell RC Mojo Refractor #58 Red Sox
+15: Price:
+16: $3.00
+17: $3.00
+18: Item ID:
+19: 376919546626
+20: 376919546626
+21: Order number:
+22: 24-14225-65164
+23: 24-14225-65164
+24: Seller:
+25: dcsports87
+26: dcsports87 sport cards & live breaks LLC
+27: 3957 Westerre Pkwy
+28: Ste 330
+29: Henrico, 23233 VA
+30: United States
+31: dcsports87
+32: dcsports87 sport cards & live breaks LLC
+33: 3957 Westerre Pkwy
+34: Ste 330
+35: Henrico, 23233 VA
+36: United States
+37: 2025 Bowman Jacob Wilson Mega Box RC Refractor #9 Athletics
+38: Price:
+39: $0.99
+40: $0.99
+41: Item ID:
+42: 376934532345
+43: 376934532345
+44: Order number:
+45: 24-14225-65164
+46: 24-14225-65164
+47: Seller:
+48: dcsports87
+49: dcsports87 sport cards & live breaks LLC
+50: 3957 Westerre Pkwy
+51: Ste 330
+52: Henrico, 23233 VA
+53: United States
+54: dcsports87
+55: dcsports87 sport cards & live breaks LLC
+56: 3957 Westerre Pkwy
+57: Ste 330
+58: Henrico, 23233 VA
+59: United States
+60: 2025 Topps Holiday Riley Greene Chrome Gold Refractor #/50 Tigers
+61: Price:
+62: $5.83
+63: $5.83
+64: Item ID:
+65: 376934528438
+66: 376934528438
+67: Order number:
+68: 24-14225-65164
+69: 24-14225-65164
+70: Seller:
+71: dcsports87
+72: dcsports87 sport cards & live breaks LLC
+73: 3957 Westerre Pkwy
+74: Ste 330
+75: Henrico, 23233 VA
+76: United States
+77: dcsports87
+78: dcsports87 sport cards & live breaks LLC
+79: 3957 Westerre Pkwy
+80: Ste 330
+81: Henrico, 23233 VA
+82: United States
+83: 2025 Bowman Corey Seager Green Pattern Border #/99 Rangers
+84: Price:
+85: $2.25
+86: $2.25
+87: Item ID:
+88: 376934525433
+89: 376934525433
+90: Order number:
+91: 24-14225-65164
+92: 24-14225-65164
+93: Seller:
+94: dcsports87
+95: dcsports87 sport cards & live breaks LLC
+96: 3957 Westerre Pkwy
+97: Ste 330
+98: Henrico, 23233 VA
+99: United States
+100: dcsports87
+101: dcsports87 sport cards & live breaks LLC
+102: 3957 Westerre Pkwy
+103: Ste 330
+104: Henrico, 23233 VA
+105: United States
+106: 2025 Bowman Dylan Crews Chrome Rookie of the Year Favorites RC #ROY-1 Nationals
+107: Price:
+108: $2.50
+109: $2.50
+110: Item ID:
+111: 376934521720
+112: 376934521720
+113: Order number:
+114: 24-14225-65164
+115: 24-14225-65164
+116: Seller:
+117: dcsports87
+118: dcsports87 sport cards & live breaks LLC
+119: 3957 Westerre Pkwy
+120: Ste 330
+121: Henrico, 23233 VA
+122: United States
+123: dcsports87
+124: dcsports87 sport cards & live breaks LLC
+125: 3957 Westerre Pkwy
+126: Ste 330
+127: Henrico, 23233 VA
+128: United States
+129: 2025 Topps Shohei Ohtani Roki Sasaki Dynamic Duals #DD-15 Dodgers
+130: Price:
+131: $5.50
+132: $5.50
+133: Item ID:
+134: 376934525686
+135: 376934525686
+136: Order number:
+137: 24-14225-65164
+138: 24-14225-65164
+139: Seller:
+140: dcsports87
+141: dcsports87 sport cards & live breaks LLC
+142: 3957 Westerre Pkwy
+143: Ste 330
+144: Henrico, 23233 VA
+145: United States
+146: dcsports87
+147: dcsports87 sport cards & live breaks LLC
+148: 3957 Westerre Pkwy
+149: Ste 330
+150: Henrico, 23233 VA
+151: United States
+152: 2025 Topps Black and White Jasson Dominguez Purple #/25 Yankees
+153: Price:
+154: $6.05
+155: $6.05
+156: Item ID:
+157: 376934525418
+158: 376934525418
+159: Order number:
+160: 24-14225-65164
+161: 24-14225-65164
+162: Seller:
+163: dcsports87
+164: dcsports87 sport cards & live breaks LLC
+165: 3957 Westerre Pkwy
+166: Ste 330
+167: Henrico, 23233 VA
+168: United States
+169: dcsports87
+170: dcsports87 sport cards & live breaks LLC
+171: 3957 Westerre Pkwy
+172: Ste 330
+173: Henrico, 23233 VA
+174: United States
+175: 2023 Topps Chrome Kyle Stowers RC Negative Refractor Rookie #194 Orioles
+176: Price:
+177: $3.25
+178: $3.25
+179: Item ID:
+180: 376934523805
+181: 376934523805
+182: Order number:
+183: 24-14225-65164
+184: 24-14225-65164
+185: Seller:
+186: dcsports87
+187: dcsports87 sport cards & live breaks LLC
+188: 3957 Westerre Pkwy
+189: Ste 330
+190: Henrico, 23233 VA
+191: United States
+192: dcsports87
+193: dcsports87 sport cards & live breaks LLC
+194: 3957 Westerre Pkwy
+195: Ste 330
+196: Henrico, 23233 VA
+197: United States
+198: 2025 Topps Chrome Update James Wood Night Terrors RC Rookie #NT-25 Nationals
+199: Price:
+200: $1.25
+201: $1.25
+202: Item ID:
+203: 127666856702
+204: 127666856702
+205: Order number:
+206: 24-14225-65164
+207: 24-14225-65164
+208: Seller:
+209: dcsports87
+210: dcsports87 sport cards & live breaks LLC
+211: 3957 Westerre Pkwy
+212: Ste 330
+213: Henrico, 23233 VA
+214: United States
+215: dcsports87
+216: dcsports87 sport cards & live breaks LLC
+217: 3957 Westerre Pkwy
+218: Ste 330
+219: Henrico, 23233 VA
+220: United States
+221: 2024 Topps Pristine Corbin Carroll Oh Snap! #OH-8 Diamondbacks
+222: Price:
+223: $2.25
+224: $2.25
+225: Item ID:
+226: 127671461315
+227: 127671461315
+228: Order number:
+229: 24-14225-65164
+230: 24-14225-65164
+231: Seller:
+232: dcsports87
+233: dcsports87 sport cards & live breaks LLC
+234: 3957 Westerre Pkwy
+235: Ste 330
+236: Henrico, 23233 VA
+237: United States
+238: dcsports87
+239: dcsports87 sport cards & live breaks LLC
+240: 3957 Westerre Pkwy
+241: Ste 330
+242: Henrico, 23233 VA
+243: United States
+244: View order details
+245: Your order contained more than 10 items. Please view order details in
+246: My eBay
+247: for a complete summary.
+248: Popular in your interests
+249: See all
+250: See all
+251: 2025 Topps Her…
+252: $500.00
+253: Or Best Offer
+254: 2025 Topps Ser…
+255: $240.00
+256: Or Best Offer
+257: 2025 Topps Cos…
+258: $350.00
+259: Or Best Offer
+260: Free shipping
+261: 2024 Topps T20…
+262: $2,650.00
+263: Or Best Offer
+264: Order total:
+265: Subtotal (33 items)
+266: $122.44
+267: Shipping
+268: $20.99
+269: Sales tax
+270: $14.41
+271: Total charged to
+272: $157.84
+273: Money Back Guarantee
+274: With the eBay Money Back Guarantee, we've got you covered. Receive your order or your money back – it's that easy.
+275: Learn more
+276: How useful is this email?
+277: Email Reference ID: [#d99c0ae19da94ddcb198d79eaea0b203]
+278: Update your
+279: email preferences
+280: ,
+281: unsubscribe
+282: or learn about
+283: account protection
+284: .
+285: If you have a question,
+286: contact us
+287: .
+288: eBay I‌nc., 2‌025 H‌amilton A‌venue, S‌an J‌ose, C‌A 9‌5125, U‌nited S‌tates
+289: © 1995-2026 eBay Inc. or its affiliates

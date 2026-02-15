@@ -1,0 +1,55 @@
+FROM: eBay <ebay@ebay.com>
+SUBJECT: We sent your payout
+DATE: Fri, 13 Feb 2026 04:37:58 -0700
+============================================================
+$51.13 was sent to your bank account
+See details
+Total payout
+$51.13
+Sent to
+Chase Bank ending in 1812
+Payout type
+Scheduled
+Date
+Feb 13, 2026
+Payout ID
+7336103662
+Est. arrival
+1-3 business days
+Learn more about payout timing
+FAQs
+When will my funds be available?
+Regardless of how your buyer pays, funds are typically available for payouts within 2 business days of order confirmation, unless subject to a hold.
+How often are my payouts sent?
+You can schedule your payouts to be sent weekly, biweekly, or monthly.
+Adjust my payout schedule
+If your payout schedule is weekly or longer, you can request an on-demand payout from your available funds anytime before your next payout date
+Request a payout on Seller Hub
+Request a payout on My eBay
+How do I change my payout method?
+You may choose to receive payouts to a debit card instead of your linked bank account.
+For a small fee, payouts can be made to debit cards and typically arrive within 30 minutes after they're requested.
+Adjust my payout method
+Update your email preferences
+You are receiving this email based on your eBay account preferences. To change which emails you receive from eBay, go to
+Communication Preferences
+in My eBay.
+Email reference id: [#a5de793cfbfa46f39ebdcf55c6e883cd#]
+eBay Commerce Inc. sent this message to Collin walters (collin_graphs).
+eBay Commerce Inc., 2065 Hamilton Ave., San Jose, CA 95125, United States. Questions? Contact us
+Help & Contact
+.
+Please see our
+payments terms of use
+for sellers for our payments policies.
+Learn more about
+account protection
+. eBay is committed to your privacy. Learn more about our
+privacy notice
+and
+user agreement
+.
+We don't check this mailbox, so please don't reply to this message. If you have a question, go to
+Help & Contact
+.
+Copyright © 2026. eBay Inc. All Rights Reserved. Designated trademarks and brands are the property of their respective owners. eBay and the eBay logo are trademarks of eBay Inc., 2025 Hamilton Avenue, San Jose, CA 95125.
