@@ -19,7 +19,12 @@ import imaplib
 import email
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
+import os
 import sys
+
+# Ensure this script's directory is on the path (for NAS where pymysql is co-located)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import pymysql
 from ebay_parser import (
     parse_order_confirmed_email,

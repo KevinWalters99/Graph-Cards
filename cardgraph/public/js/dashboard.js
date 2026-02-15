@@ -90,7 +90,7 @@ const Dashboard = {
             <div class="card">
                 <div class="card-label">Giveaways</div>
                 <div class="card-value">${s.giveaway_count}</div>
-                <div class="card-sub">${s.total_items} total line items</div>
+                <div class="card-sub">Net expense: ${App.formatCurrency(s.giveaway_net)}</div>
             </div>
             <div class="card">
                 <div class="card-label">Unique Buyers</div>

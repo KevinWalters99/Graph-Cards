@@ -16,15 +16,27 @@ class LineItemController
         $sortKey = $_GET['sort'] ?? 'transaction_completed_at';
         $sortDir = strtoupper($_GET['order'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
 
-        // Whitelist sort columns
+        // Whitelist sort columns — maps sort key to SQL expression
         $allowedSorts = [
-            'transaction_completed_at', 'order_placed_at', 'listing_title',
-            'transaction_amount', 'original_item_price', 'buyer_paid',
-            'buy_format', 'order_id', 'ledger_transaction_id',
+            'transaction_completed_at' => 'a.transaction_completed_at',
+            'order_placed_at'          => 'a.order_placed_at',
+            'listing_title'            => 'a.listing_title',
+            'transaction_amount'       => 'a.transaction_amount',
+            'original_item_price'      => 'a.original_item_price',
+            'buyer_paid'               => 'a.buyer_paid',
+            'buy_format'               => 'a.buy_format',
+            'order_id'                 => 'a.order_id',
+            'ledger_transaction_id'    => 'a.ledger_transaction_id',
+            'transaction_type'         => 'a.transaction_type',
+            'buyer_name'               => 'b.buyer_name',
+            'cost_amount'              => 'COALESCE(ic.total_cost, 0)',
+            'status_name'              => 's.status_name',
+            'profit'                   => '(a.transaction_amount - COALESCE(ic.total_cost, 0))',
         ];
-        if (!in_array($sortKey, $allowedSorts, true)) {
+        if (!array_key_exists($sortKey, $allowedSorts)) {
             $sortKey = 'transaction_completed_at';
         }
+        $sortExpr = $allowedSorts[$sortKey];
 
         // Build WHERE conditions
         $where = [];
@@ -92,7 +104,7 @@ class LineItemController
             FROM CG_ItemCosts GROUP BY ledger_transaction_id
         ) ic ON ic.ledger_transaction_id = a.ledger_transaction_id
         {$whereClause}
-        ORDER BY a.{$sortKey} {$sortDir}
+        ORDER BY {$sortExpr} {$sortDir}
         LIMIT {$perPage} OFFSET {$offset}";
 
         $dataStmt = $pdo->prepare($dataSql);
@@ -171,5 +183,25 @@ class LineItemController
             'history' => $histStmt->fetchAll(),
             'costs'   => $costStmt->fetchAll(),
         ]);
+    }
+
+    /**
+     * GET /api/livestreams
+     * Returns livestream list for filter dropdowns. Available to all authenticated users.
+     */
+    public function livestreams(array $params = []): void
+    {
+        $sql = "SELECT
+            l.livestream_id,
+            l.livestream_title,
+            DATE(MIN(a.order_placed_at)) AS stream_date,
+            COUNT(*) AS total_items
+        FROM CG_AuctionLineItems a
+        JOIN CG_Livestreams l ON l.livestream_id = a.livestream_id
+        GROUP BY l.livestream_id, l.livestream_title
+        ORDER BY stream_date DESC";
+
+        $stmt = cg_db()->query($sql);
+        jsonResponse(['data' => $stmt->fetchAll()]);
     }
 }

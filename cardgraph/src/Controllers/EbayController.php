@@ -227,7 +227,7 @@ class EbayController
     public function importEmails(array $params = []): void
     {
         $body = getJsonBody();
-        $noMove = !empty($body['no_move']);
+        $phase = !empty($body['phase']) ? (int)$body['phase'] : 1;
 
         // Find Python and script
         $scriptDir = realpath(__DIR__ . '/../../tools');
@@ -235,6 +235,32 @@ class EbayController
 
         if (!file_exists($script)) {
             jsonError('Import script not found at: ' . $script, 500);
+        }
+
+        // Check if import is already running
+        $lockFile = $scriptDir . '/import.lock';
+        $outputFile = $scriptDir . '/import_output.txt';
+
+        // Check for status poll
+        if (!empty($body['check_status'])) {
+            if (file_exists($lockFile)) {
+                jsonResponse(['status' => 'running']);
+            } elseif (file_exists($outputFile)) {
+                $outputText = file_get_contents($outputFile);
+                $summary = $this->parseImportOutput($outputText);
+                jsonResponse([
+                    'status' => 'complete',
+                    'output' => $outputText,
+                    'summary' => $summary,
+                ]);
+            } else {
+                jsonResponse(['status' => 'idle']);
+            }
+            return;
+        }
+
+        if (file_exists($lockFile)) {
+            jsonError('Import already running', 409);
         }
 
         // Try python3 first, fall back to python
@@ -247,23 +273,30 @@ class EbayController
             }
         }
 
-        $args = $noMove ? ' --no-move' : '';
-        $cmd = escapeshellcmd($pythonBin) . ' ' . escapeshellarg($script) . $args . ' 2>&1';
+        // Run in background: write output to file, use lock file
+        $args = ' --no-move --phase ' . $phase;
+        $cmd = 'touch ' . escapeshellarg($lockFile) . ' && '
+             . escapeshellcmd($pythonBin) . ' ' . escapeshellarg($script) . $args
+             . ' > ' . escapeshellarg($outputFile) . ' 2>&1'
+             . '; rm -f ' . escapeshellarg($lockFile);
 
-        $output = [];
-        $returnCode = 0;
-        exec($cmd, $output, $returnCode);
+        // Launch as true background process (nohup + redirect to avoid blocking)
+        shell_exec('nohup sh -c ' . escapeshellarg($cmd) . ' > /dev/null 2>&1 &');
 
-        $outputText = implode("\n", $output);
+        jsonResponse([
+            'status' => 'started',
+            'summary' => ['orders_imported' => 0, 'deliveries_updated' => 0, 'linked' => 0],
+        ]);
+    }
 
-        // Parse summary from output
+    private function parseImportOutput(string $outputText): array
+    {
         $summary = [
             'orders_imported' => 0,
             'deliveries_updated' => 0,
             'linked' => 0,
         ];
 
-        // Extract counts from phase result lines
         if (preg_match_all('/(\d+) imported/', $outputText, $m)) {
             foreach ($m[1] as $v) {
                 $summary['orders_imported'] += (int)$v;
@@ -276,11 +309,7 @@ class EbayController
             $summary['linked'] = (int)$m[1];
         }
 
-        jsonResponse([
-            'output' => $outputText,
-            'return_code' => $returnCode,
-            'summary' => $summary,
-        ]);
+        return $summary;
     }
 
     /**

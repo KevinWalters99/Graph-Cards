@@ -39,6 +39,13 @@ const LineItems = {
                         { value: 'GIVEAWAY', label: 'Giveaway' },
                     ]
                 },
+                {
+                    type: 'select', name: 'livestream_id', label: 'Auction',
+                    options: this.livestreams.map(ls => ({
+                        value: ls.livestream_id,
+                        label: (ls.stream_date || '') + ' - ' + ls.livestream_title + ' (' + ls.total_items + ' items)'
+                    }))
+                },
                 { type: 'text', name: 'search', label: 'Search', placeholder: 'Title or buyer...' },
             ], (f) => { this.filters = f; this.page = 1; this.loadData(); });
 
@@ -50,8 +57,12 @@ const LineItems = {
 
     async loadFilterOptions() {
         try {
-            const result = await API.get('/api/statuses');
-            this.statuses = result.data || [];
+            const [statusResult, lsResult] = await Promise.all([
+                API.get('/api/statuses'),
+                API.get('/api/livestreams'),
+            ]);
+            this.statuses = statusResult.data || [];
+            this.livestreams = lsResult.data || [];
         } catch (e) { /* silent */ }
     },
 
@@ -61,7 +72,7 @@ const LineItems = {
             const params = {
                 ...this.filters,
                 page: this.page,
-                per_page: 50,
+                per_page: 100,
                 sort: this.sortKey,
                 order: this.sortDir,
             };
@@ -87,7 +98,7 @@ const LineItems = {
                 { key: 'listing_title', label: 'Title', sortable: true },
                 { key: 'transaction_type', label: 'Type', sortable: true },
                 { key: 'buy_format', label: 'Format', sortable: true },
-                { key: 'buyer_name', label: 'Buyer', sortable: false },
+                { key: 'buyer_name', label: 'Buyer', sortable: true },
                 {
                     key: 'original_item_price', label: 'Price', align: 'right', sortable: true,
                     format: (v) => App.formatCurrency(v)
@@ -97,14 +108,14 @@ const LineItems = {
                     format: (v) => App.formatCurrency(v)
                 },
                 {
-                    key: 'cost_amount', label: 'Cost', align: 'right', sortable: false,
+                    key: 'cost_amount', label: 'Cost', align: 'right', sortable: true,
                     render: (row) => {
                         const cost = parseFloat(row.cost_amount);
                         return cost > 0 ? App.formatCurrency(cost) : '<span class="text-muted">-</span>';
                     }
                 },
                 {
-                    key: 'profit', label: 'Profit/Loss', align: 'right', sortable: false,
+                    key: 'profit', label: 'Profit/Loss', align: 'right', sortable: true,
                     render: (row) => {
                         const cost = parseFloat(row.cost_amount) || 0;
                         if (cost === 0) return '<span class="text-muted">-</span>';
@@ -114,7 +125,7 @@ const LineItems = {
                     }
                 },
                 {
-                    key: 'status_name', label: 'Status', sortable: false,
+                    key: 'status_name', label: 'Status', sortable: true,
                     render: (row) => {
                         const cls = App.statusClass(row.status_name);
                         return `<span class="status-badge ${cls}">${row.status_name || '-'}</span>`;
@@ -124,7 +135,7 @@ const LineItems = {
             data: result.data || [],
             total: result.total || 0,
             page: result.page || 1,
-            perPage: result.per_page || 50,
+            perPage: result.per_page || 100,
             sortKey: this.sortKey,
             sortDir: this.sortDir,
             onSort: (key) => {

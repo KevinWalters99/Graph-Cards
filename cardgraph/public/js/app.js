@@ -113,9 +113,12 @@ const App = {
         content.innerHTML = html;
         overlay.style.display = 'flex';
 
-        // Close on overlay click
+        // Close on overlay click, but only if mousedown also started on overlay
+        // (prevents closing when selecting text in inputs and mouse drifts outside)
+        let mouseDownTarget = null;
+        overlay.onmousedown = (e) => { mouseDownTarget = e.target; };
         overlay.onclick = (e) => {
-            if (e.target === overlay) this.closeModal();
+            if (e.target === overlay && mouseDownTarget === overlay) this.closeModal();
         };
     },
 

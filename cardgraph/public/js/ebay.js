@@ -333,25 +333,51 @@ var Ebay = {
         App.toast('Starting email import...', 'info');
 
         API.post('/api/ebay/import', { no_move: true }).then(function(result) {
-            btn.disabled = false;
-            btn.textContent = 'Import Emails';
-
-            var summary = result.summary || {};
-            var msg = 'Import complete: ' +
-                (summary.orders_imported || 0) + ' new orders, ' +
-                (summary.deliveries_updated || 0) + ' deliveries updated';
-            App.toast(msg, 'success');
-
-            if (result.output) {
-                console.log('Import output:\n' + result.output);
+            if (result.status === 'started') {
+                Ebay.pollImport(btn);
+            } else {
+                Ebay.finishImport(btn, result);
             }
-
-            Ebay.loadSummary();
-            Ebay.loadData();
         }).catch(function(err) {
             btn.disabled = false;
             btn.textContent = 'Import Emails';
             App.toast('Import failed: ' + err.message, 'error');
         });
+    },
+
+    pollImport: function(btn) {
+        setTimeout(function() {
+            API.post('/api/ebay/import', { check_status: true }).then(function(result) {
+                if (result.status === 'running') {
+                    btn.textContent = 'Importing...';
+                    Ebay.pollImport(btn);
+                } else if (result.status === 'complete') {
+                    Ebay.finishImport(btn, result);
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = 'Import Emails';
+                }
+            }).catch(function() {
+                Ebay.pollImport(btn);
+            });
+        }, 3000);
+    },
+
+    finishImport: function(btn, result) {
+        btn.disabled = false;
+        btn.textContent = 'Import Emails';
+
+        var summary = result.summary || {};
+        var msg = 'Import complete: ' +
+            (summary.orders_imported || 0) + ' new orders, ' +
+            (summary.deliveries_updated || 0) + ' deliveries updated';
+        App.toast(msg, 'success');
+
+        if (result.output) {
+            console.log('Import output:\n' + result.output);
+        }
+
+        Ebay.loadSummary();
+        Ebay.loadData();
     },
 };

@@ -29,6 +29,7 @@ class FinancialSummaryController
             SUM(a.quantity_sold) AS total_quantity,
             SUM(CASE WHEN a.buy_format = 'AUCTION' THEN 1 ELSE 0 END) AS auction_count,
             SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN 1 ELSE 0 END) AS giveaway_count,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN a.transaction_amount ELSE 0 END), 0) AS giveaway_net,
             SUM(CASE WHEN a.transaction_type = 'SHIPPING_CHARGE' THEN 1 ELSE 0 END) AS shipping_charge_count,
             SUM(CASE WHEN a.transaction_type = 'TIP' THEN 1 ELSE 0 END) AS tip_count,
             COALESCE(SUM(CASE WHEN a.transaction_type = 'TIP' THEN a.transaction_amount ELSE 0 END), 0) AS total_tips,
@@ -83,6 +84,7 @@ class FinancialSummaryController
             $row['total_quantity'] = (int) $row['total_quantity'];
             $row['auction_count'] = (int) $row['auction_count'];
             $row['giveaway_count'] = (int) $row['giveaway_count'];
+            $row['giveaway_net'] = round((float) $row['giveaway_net'], 2);
             $row['shipping_charge_count'] = (int) $row['shipping_charge_count'];
             $row['tip_count'] = (int) $row['tip_count'];
             $row['total_tips'] = round((float) $row['total_tips'], 2);
@@ -107,6 +109,7 @@ class FinancialSummaryController
             SUM(a.quantity_sold) AS total_quantity,
             SUM(CASE WHEN a.buy_format = 'AUCTION' THEN 1 ELSE 0 END) AS auction_count,
             SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN 1 ELSE 0 END) AS giveaway_count,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN a.transaction_amount ELSE 0 END), 0) AS giveaway_net,
             SUM(CASE WHEN a.transaction_type = 'SHIPPING_CHARGE' THEN 1 ELSE 0 END) AS shipping_charge_count,
             SUM(CASE WHEN a.transaction_type = 'TIP' THEN 1 ELSE 0 END) AS tip_count,
             COALESCE(SUM(CASE WHEN a.transaction_type = 'TIP' THEN a.transaction_amount ELSE 0 END), 0) AS total_tips,
@@ -177,6 +180,7 @@ class FinancialSummaryController
             $row['total_quantity'] = (int) $row['total_quantity'];
             $row['auction_count'] = (int) $row['auction_count'];
             $row['giveaway_count'] = (int) $row['giveaway_count'];
+            $row['giveaway_net'] = round((float) $row['giveaway_net'], 2);
             $row['shipping_charge_count'] = (int) $row['shipping_charge_count'];
             $row['tip_count'] = (int) $row['tip_count'];
             $row['total_tips'] = round((float) $row['total_tips'], 2);

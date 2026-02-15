@@ -230,6 +230,29 @@ body {
     margin-top: 4px;
 }
 
+.cards-compact {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.cards-compact .card {
+    padding: 12px 14px;
+}
+
+.cards-compact .card-label {
+    margin-bottom: 4px;
+    font-size: 11px;
+}
+
+.cards-compact .card-value {
+    font-size: 20px;
+}
+
+.cards-compact .card-sub {
+    margin-top: 2px;
+}
+
 /* ============================================================
    Filter Bar
    ============================================================ */
@@ -890,4 +913,25 @@ body {
 .sub-tab.active {
     color: #1a1a2e;
     border-bottom-color: #4a9eff;
+}
+
+/* ============================================================
+   Cost Matrix Action Bar
+   ============================================================ */
+.cm-action-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: #fff;
+    padding: 16px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #e8eaed;
+}
+
+.cm-buttons {
+    display: flex;
+    gap: 8px;
 }

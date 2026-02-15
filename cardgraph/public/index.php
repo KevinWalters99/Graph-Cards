@@ -30,6 +30,7 @@ $router->get('/api/dashboard/trends', ['DashboardController', 'trends']);
 $router->get('/api/line-items', ['LineItemController', 'index']);
 $router->get('/api/line-items/{id}', ['LineItemController', 'show']);
 $router->put('/api/line-items/{id}/status', ['StatusController', 'update']);
+$router->get('/api/livestreams', ['LineItemController', 'livestreams']);
 
 // === Item Costs ===
 $router->get('/api/costs', ['CostController', 'index']);
@@ -69,6 +70,17 @@ $router->get('/api/statuses', ['StatusController', 'index']);
 $router->get('/api/users', ['UserController', 'index']);
 $router->post('/api/users', ['UserController', 'store']);
 $router->put('/api/users/{id}', ['UserController', 'update']);
+
+// === Cost Matrix (admin) ===
+$router->get('/api/cost-matrix/rules', ['CostMatrixController', 'listRules']);
+$router->post('/api/cost-matrix/rules', ['CostMatrixController', 'createRule']);
+$router->put('/api/cost-matrix/rules/{id}', ['CostMatrixController', 'updateRule']);
+$router->delete('/api/cost-matrix/rules/{id}', ['CostMatrixController', 'deleteRule']);
+$router->get('/api/cost-matrix/livestreams', ['CostMatrixController', 'livestreams']);
+$router->get('/api/cost-matrix/auction-summary', ['CostMatrixController', 'auctionSummary']);
+$router->post('/api/cost-matrix/preview', ['CostMatrixController', 'preview']);
+$router->post('/api/cost-matrix/apply', ['CostMatrixController', 'apply']);
+$router->post('/api/cost-matrix/clear', ['CostMatrixController', 'clear']);
 
 // === Maintenance ===
 $router->get('/api/maintenance/upload-log', ['MaintenanceController', 'uploadLog']);
