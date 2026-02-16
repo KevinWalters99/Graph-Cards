@@ -173,6 +173,17 @@ const AnalyticsAdmin = {
                         return '<span class="status-badge status-cancelled">Inactive</span>';
                     }
                 },
+                {
+                    key: 'is_recurring', label: 'Recurring', sortable: false,
+                    render: (row) => {
+                        if (row.is_recurring != 1) return '-';
+                        let label = row.recurrence_type.charAt(0).toUpperCase() + row.recurrence_type.slice(1);
+                        if (row.recurrence_type === 'custom' && row.recurrence_days) {
+                            label += ` (${row.recurrence_days}d)`;
+                        }
+                        return `<span class="status-badge status-completed">${label}</span>`;
+                    }
+                },
                 { key: 'created_by_name', label: 'Created By', sortable: false },
                 {
                     key: 'actions', label: 'Actions', sortable: false,
@@ -218,9 +229,13 @@ const AnalyticsAdmin = {
             `<option value="${m.metric_id}" ${existing && existing.metric_id == m.metric_id ? 'selected' : ''}>${m.metric_name}</option>`
         ).join('');
 
-        const windowOptions = ['auction','monthly','quarterly','annually','2-year','3-year','4-year','5-year'].map(w =>
+        const windowOptions = ['auction','weekly','monthly','quarterly','annually','2-year','3-year','4-year','5-year'].map(w =>
             `<option value="${w}" ${existing && existing.time_window === w ? 'selected' : ''}>${w.charAt(0).toUpperCase() + w.slice(1)}</option>`
         ).join('');
+
+        const isRecurring = existing && parseInt(existing.is_recurring);
+        const recType = existing ? existing.recurrence_type : 'weekly';
+        const recDays = existing && existing.recurrence_days ? existing.recurrence_days : '';
 
         App.openModal(`
             <div class="modal-header">
@@ -259,6 +274,32 @@ const AnalyticsAdmin = {
                     </div>` : ''}
                 </div>
                 <div class="form-row">
+                    <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:16px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="aa-ms-recurring" ${isRecurring ? 'checked' : ''}>
+                            Recurring Milestone
+                        </label>
+                    </div>
+                </div>
+                <div id="aa-ms-recurrence-options" style="display:${isRecurring ? 'block' : 'none'}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Frequency *</label>
+                            <select id="aa-ms-recurrence-type">
+                                <option value="weekly" ${recType === 'weekly' ? 'selected' : ''}>Weekly</option>
+                                <option value="monthly" ${recType === 'monthly' ? 'selected' : ''}>Monthly</option>
+                                <option value="custom" ${recType === 'custom' ? 'selected' : ''}>Custom</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="aa-ms-custom-days-group"
+                             style="display:${recType === 'custom' ? 'block' : 'none'}">
+                            <label>Interval (days) *</label>
+                            <input type="number" id="aa-ms-recurrence-days" min="1" step="1"
+                                   value="${recDays}" placeholder="e.g., 14">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label>Window Start *</label>
                         <input type="date" id="aa-ms-start" value="${existing ? existing.window_start : ''}">
@@ -278,6 +319,16 @@ const AnalyticsAdmin = {
         document.getElementById('aa-ms-save-btn').addEventListener('click', () => {
             this.saveMilestone(existing ? existing.milestone_id : null);
         });
+
+        document.getElementById('aa-ms-recurring').addEventListener('change', (e) => {
+            document.getElementById('aa-ms-recurrence-options').style.display =
+                e.target.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('aa-ms-recurrence-type').addEventListener('change', (e) => {
+            document.getElementById('aa-ms-custom-days-group').style.display =
+                e.target.value === 'custom' ? 'block' : 'none';
+        });
     },
 
     async saveMilestone(milestoneId) {
@@ -292,6 +343,22 @@ const AnalyticsAdmin = {
 
         const activeEl = document.getElementById('aa-ms-active');
         if (activeEl) data.is_active = parseInt(activeEl.value);
+
+        const recurringEl = document.getElementById('aa-ms-recurring');
+        if (recurringEl) {
+            data.is_recurring = recurringEl.checked ? 1 : 0;
+            if (data.is_recurring) {
+                data.recurrence_type = document.getElementById('aa-ms-recurrence-type').value;
+                if (data.recurrence_type === 'custom') {
+                    data.recurrence_days = parseInt(document.getElementById('aa-ms-recurrence-days').value) || null;
+                } else {
+                    data.recurrence_days = null;
+                }
+            } else {
+                data.recurrence_type = null;
+                data.recurrence_days = null;
+            }
+        }
 
         if (!data.milestone_name || !data.target_value || !data.window_start || !data.window_end) {
             App.toast('All fields are required', 'error');

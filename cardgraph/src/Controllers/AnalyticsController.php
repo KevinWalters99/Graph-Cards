@@ -60,6 +60,8 @@ class AnalyticsController
      */
     public function listMilestones(array $params = []): void
     {
+        $this->processRecurringMilestones();
+
         $where = [];
         $bind = [];
 
@@ -108,25 +110,51 @@ class AnalyticsController
             jsonError('All fields are required and target must be > 0', 400);
         }
 
-        $validWindows = ['auction','monthly','quarterly','annually','2-year','3-year','4-year','5-year'];
+        $validWindows = ['auction','weekly','monthly','quarterly','annually','2-year','3-year','4-year','5-year'];
         if (!in_array($timeWindow, $validWindows, true)) {
             jsonError('Invalid time window', 400);
+        }
+
+        // Recurring fields
+        $isRecurring    = !empty($body['is_recurring']) ? 1 : 0;
+        $recurrenceType = $body['recurrence_type'] ?? null;
+        $recurrenceDays = isset($body['recurrence_days']) ? (int) $body['recurrence_days'] : null;
+
+        if ($isRecurring) {
+            $validRecTypes = ['weekly', 'monthly', 'custom'];
+            if (!in_array($recurrenceType, $validRecTypes, true)) {
+                jsonError('Recurring milestones require a valid recurrence type (weekly, monthly, custom)', 400);
+            }
+            if ($recurrenceType === 'custom' && ($recurrenceDays === null || $recurrenceDays < 1)) {
+                jsonError('Custom recurrence requires days > 0', 400);
+            }
+            if ($recurrenceType !== 'custom') {
+                $recurrenceDays = null;
+            }
+        } else {
+            $recurrenceType = null;
+            $recurrenceDays = null;
         }
 
         $pdo = cg_db();
         $stmt = $pdo->prepare(
             "INSERT INTO CG_AnalyticsMilestones
-             (metric_id, milestone_name, target_value, time_window, window_start, window_end, created_by)
-             VALUES (:metric_id, :name, :target, :tw, :ws, :we, :uid)"
+             (metric_id, milestone_name, target_value, time_window,
+              window_start, window_end, is_recurring, recurrence_type, recurrence_days, created_by)
+             VALUES (:metric_id, :name, :target, :tw,
+                     :ws, :we, :recurring, :rtype, :rdays, :uid)"
         );
         $stmt->execute([
-            ':metric_id' => $metricId,
-            ':name'      => $name,
-            ':target'    => $target,
-            ':tw'        => $timeWindow,
-            ':ws'        => parseDate($windowStart),
-            ':we'        => parseDate($windowEnd),
-            ':uid'       => $user['user_id'],
+            ':metric_id'  => $metricId,
+            ':name'       => $name,
+            ':target'     => $target,
+            ':tw'         => $timeWindow,
+            ':ws'         => parseDate($windowStart),
+            ':we'         => parseDate($windowEnd),
+            ':recurring'  => $isRecurring,
+            ':rtype'      => $recurrenceType,
+            ':rdays'      => $recurrenceDays,
+            ':uid'        => $user['user_id'],
         ]);
 
         jsonResponse(['message' => 'Milestone created', 'id' => (int) $pdo->lastInsertId()], 201);
@@ -145,13 +173,16 @@ class AnalyticsController
         $bind = [':id' => $id];
 
         $fields = [
-            'metric_id'      => 'int',
-            'milestone_name' => 'string',
-            'target_value'   => 'float',
-            'time_window'    => 'string',
-            'window_start'   => 'date',
-            'window_end'     => 'date',
-            'is_active'      => 'int',
+            'metric_id'       => 'int',
+            'milestone_name'  => 'string',
+            'target_value'    => 'float',
+            'time_window'     => 'string',
+            'window_start'    => 'date',
+            'window_end'      => 'date',
+            'is_active'       => 'int',
+            'is_recurring'    => 'int',
+            'recurrence_type' => 'string',
+            'recurrence_days' => 'int',
         ];
 
         foreach ($fields as $field => $type) {
@@ -348,6 +379,8 @@ class AnalyticsController
      */
     public function getPacing(array $params = []): void
     {
+        $this->processRecurringMilestones();
+
         $pdo = cg_db();
 
         $where = ['m.is_active = 1'];
@@ -683,5 +716,113 @@ class AnalyticsController
         $avgMonthlyFromRegression = max(0, $avgMonthlyFromRegression);
 
         return $currentActual + $avgMonthlyFromRegression * max(0, $remaining - 1);
+    }
+
+    // =========================================================
+    // Recurring Milestone Processing
+    // =========================================================
+
+    /**
+     * Auto-advance recurring milestones whose window has expired.
+     * Called lazily from listMilestones() and getPacing().
+     */
+    private function processRecurringMilestones(): void
+    {
+        $pdo = cg_db();
+        $today = date('Y-m-d');
+
+        $stmt = $pdo->prepare(
+            "SELECT * FROM CG_AnalyticsMilestones
+             WHERE is_recurring = 1
+               AND is_active = 1
+               AND window_end < :today"
+        );
+        $stmt->execute([':today' => $today]);
+        $expired = $stmt->fetchAll();
+
+        if (empty($expired)) return;
+
+        $deactivateStmt = $pdo->prepare(
+            "UPDATE CG_AnalyticsMilestones SET is_active = 0 WHERE milestone_id = :id"
+        );
+
+        $insertStmt = $pdo->prepare(
+            "INSERT INTO CG_AnalyticsMilestones
+             (metric_id, milestone_name, target_value, time_window,
+              window_start, window_end, is_active, is_recurring,
+              recurrence_type, recurrence_days, created_by)
+             VALUES (:metric_id, :name, :target, :tw,
+                     :ws, :we, 1, 1,
+                     :rtype, :rdays, :uid)"
+        );
+
+        foreach ($expired as $ms) {
+            $deactivateStmt->execute([':id' => $ms['milestone_id']]);
+
+            [$nextStart, $nextEnd] = $this->computeNextWindow(
+                $ms['window_end'],
+                $ms['recurrence_type'],
+                $ms['recurrence_days'] ? (int) $ms['recurrence_days'] : null,
+                $today
+            );
+
+            $insertStmt->execute([
+                ':metric_id' => $ms['metric_id'],
+                ':name'      => $ms['milestone_name'],
+                ':target'    => $ms['target_value'],
+                ':tw'        => $ms['time_window'],
+                ':ws'        => $nextStart,
+                ':we'        => $nextEnd,
+                ':rtype'     => $ms['recurrence_type'],
+                ':rdays'     => $ms['recurrence_days'],
+                ':uid'       => $ms['created_by'],
+            ]);
+        }
+    }
+
+    /**
+     * Compute the next window start/end for a recurring milestone.
+     * Skips ahead if multiple periods have lapsed.
+     *
+     * @return array{0: string, 1: string} [next_start, next_end] as Y-m-d
+     */
+    private function computeNextWindow(
+        string $oldEnd,
+        string $recurrenceType,
+        ?int $customDays,
+        string $today
+    ): array {
+        $nextStart = date('Y-m-d', strtotime($oldEnd . ' +1 day'));
+
+        switch ($recurrenceType) {
+            case 'weekly':
+                $nextEnd = date('Y-m-d', strtotime($nextStart . ' +6 days'));
+                while ($nextEnd < $today) {
+                    $nextStart = date('Y-m-d', strtotime($nextEnd . ' +1 day'));
+                    $nextEnd = date('Y-m-d', strtotime($nextStart . ' +6 days'));
+                }
+                break;
+
+            case 'monthly':
+                $nextStart = date('Y-m-01', strtotime($oldEnd . ' +1 day'));
+                $nextEnd = date('Y-m-t', strtotime($nextStart));
+                while ($nextEnd < $today) {
+                    $nextStart = date('Y-m-01', strtotime($nextStart . ' +1 month'));
+                    $nextEnd = date('Y-m-t', strtotime($nextStart));
+                }
+                break;
+
+            case 'custom':
+            default:
+                $days = $customDays ?? 30;
+                $nextEnd = date('Y-m-d', strtotime($nextStart . ' +' . ($days - 1) . ' days'));
+                while ($nextEnd < $today) {
+                    $nextStart = date('Y-m-d', strtotime($nextEnd . ' +1 day'));
+                    $nextEnd = date('Y-m-d', strtotime($nextStart . ' +' . ($days - 1) . ' days'));
+                }
+                break;
+        }
+
+        return [$nextStart, $nextEnd];
     }
 }
