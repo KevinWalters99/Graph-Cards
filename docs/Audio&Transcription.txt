@@ -1,0 +1,368 @@
+Card graph Audio & Transcription 
+Auction Audio Capture & Transcription Module
+
+(Add-On to Existing Application)
+
+
+
+1 Purpose
+
+This feature enables autonomous recording and transcription of Whatnot live auctions, running entirely on the Synology DS718+ NAS.
+
+Primary Priority:
+	•	Reliable audio capture
+
+Secondary Priority:
+	•	Background transcription
+
+Tertiary Priority:
+	•	Transcript parsing
+
+System must operate unattended (overnight capable).
+
+
+
+2 Target Environment
+
+Hardware:
+	•	Synology DS718+
+	•	Intel Celeron J3455 (4 cores)
+	•	16GB RAM
+	•	MariaDB
+	•	Always-on system
+
+Constraints:
+	•	Limited CPU
+	•	Stability > speed
+	•	No dependency on external desktop systems
+
+
+
+3 Configuration Location
+
+All configuration is located under:
+
+Maintenance → Transcription (new sub-tab)
+
+No operational values may be hard-coded.
+
+All settings persist in MariaDB.
+
+
+
+4 Global Configuration (Editable)
+
+A. Recording Settings
+	•	Default Segment Length (minutes)
+	•	Default: 15
+	•	Range: 5–60
+	•	Audio Sample Rate
+	•	Default: 16,000 Hz
+	•	Options: 8k / 16k / 22k
+	•	Audio Channels
+	•	Default: Mono
+	•	Option: Stereo
+	•	Audio Format
+	•	Default: WAV
+	•	Optional: FLAC
+
+
+
+B. Silence Detection
+	•	Silence Threshold (dBFS)
+	•	Default: -48
+	•	Range: -30 to -60
+	•	Silence Timeout (minutes)
+	•	Default: 10
+	•	Range: 1–30
+
+
+
+C. Maximum Session Duration
+	•	Default: 10 hours
+	•	Range: 1–24 hours
+	•	Hard stop enforced
+
+
+
+D. Transcription Settings
+	•	Maximum CPU Cores
+	•	Default: 2
+	•	Range: 1–3
+	•	Must never allow all 4 cores
+	•	Model
+	•	tiny
+	•	base (default)
+	•	Priority Mode
+	•	Low (nice applied)
+
+
+
+E. Storage Settings
+	•	Base Archive Directory
+	•	Default: /volume1/auction_archive/
+	•	Editable
+	•	Folder Structure
+	•	Year-based (default)
+	•	Flat
+	•	Minimum Free Disk Threshold (GB)
+	•	Default: 5 GB
+	•	If below → stop recording safely
+
+
+
+F. Stream Acquisition Mode
+	•	Direct Stream (Preferred)
+	•	Browser Automation (Fallback)
+
+
+
+5 Per-Auction Configuration
+
+User provides:
+	•	Auction Name (required)
+	•	Auction URL (required)
+	•	Scheduled Start Time (required)
+	•	Optional overrides:
+	•	Segment length
+	•	Silence timeout
+	•	Max duration
+	•	CPU limit (≤ global max)
+	•	Capture mode
+
+
+
+6 Job Lifecycle
+
+States:
+
+Scheduled
+Recording
+Processing
+Complete
+Stopped
+Error
+
+
+
+7 Execution Flow
+
+Scheduled Start
+
+At scheduled time:
+	1.	Create session record
+	2.	Acquire stream
+	3.	Start segmented recording
+	4.	Launch transcription worker (limited to 2 cores)
+
+
+
+Recording Phase
+	•	Record audio in segments
+	•	Update DB status
+	•	Update live metrics
+	•	Enforce silence detection
+	•	Enforce 10-hour cap
+	•	Monitor disk space
+
+Recording must never wait on transcription.
+
+
+
+Stop Conditions
+
+Recording stops when:
+	•	10 minutes silence detected
+	•	OR 10-hour maximum reached
+	•	OR Manual Stop pressed
+	•	OR Disk space below threshold
+	•	OR Critical error
+
+Recorder must close file safely before exit.
+
+
+
+Processing Phase
+	•	Transcription continues
+	•	Only processes closed segments
+	•	Limited to configured CPU cores
+	•	Runs at reduced priority
+	•	Never blocks recording
+
+
+
+Completion
+
+When all segments complete:
+	•	Generate master transcript
+	•	Mark session complete
+	•	Log completion
+
+
+
+8 CPU Allocation Policy
+
+4 cores total.
+
+During recording:
+	•	Core 0 → Recorder (isolated)
+	•	Core 1 → Stream capture
+	•	Cores 2–3 → Transcription
+
+Transcription must never exceed configured CPU limit.
+
+After recording ends:
+	•	Transcription remains limited to configured CPU limit (stability mode)
+
+File Storage & Naming Convention ideas
+
+/volume1/auction_archive/
+
+/volume1/auction_archive/
+    /2026/
+        /2026-02-17_AuctionName/
+            /audio/
+            /transcripts/
+            session.json
+
+YYYYMMDD_AuctionName_SEG###.wav
+
+20260217_ModernCards_SEG001.wav
+
+YYYYMMDD_AuctionName_SEG###_HHMM-HHMM.wav
+
+YYYYMMDD_AuctionName_SEG###.txt
+
+YYYYMMDD_AuctionName_FULL.txt
+
+From filename alone, user must know:
+	•	Date
+	•	Auction
+	•	Segment number
+
+
+Database Tables
+
+sessions
+	•	id
+	•	auction_name
+	•	auction_url
+	•	status
+	•	stop_reason
+	•	start_time
+	•	end_time
+
+segments
+	•	session_id
+	•	segment_number
+	•	filename_audio
+	•	filename_transcript
+	•	duration_seconds
+	•	status
+	•	progress_percent
+
+global_settings
+	•	key
+	•	value
+
+
+
+12 UI Requirements
+
+Under active session:
+
+Display:
+	•	Status
+	•	Current segment
+	•	Segment timer
+	•	Audio level meter
+	•	Completed segment count
+	•	Transcription progress
+	•	Stop Recording button
+	•	Cancel Job button
+
+User can leave and return without losing state.
+
+
+
+13 Stop Controls
+
+Stop Recording:
+	•	Stops recording only
+	•	Transcription continues
+
+Cancel Job:
+	•	Stops recording
+	•	Stops transcription
+	•	Marks unfinished segments error
+
+Must be idempotent.
+
+
+
+14 Logging
+
+Per session log:
+	•	Start event
+	•	Segment creation
+	•	Silence trigger
+	•	Max duration trigger
+	•	Manual stop
+	•	Disk threshold stop
+	•	Errors
+	•	Completion
+
+Logs rotated and stored per session.
+
+
+
+15 Stability Guardrails (Non-Configurable)
+	•	Recorder always isolated to dedicated core
+	•	Transcription never exceeds configured cores
+	•	Recorder never blocks on DB
+	•	Files always closed safely
+	•	No VM (Docker preferred if needed)
+	•	No hard dependency on external systems
+
+
+
+16 Stream Acquisition
+
+Preferred:
+	•	Direct HLS stream capture via ffmpeg
+
+Fallback:
+	•	Headless Chromium (Docker)
+	•	Audio routed via virtual sink
+
+Direct capture strongly preferred for stability.
+
+
+
+17 Risk Summary
+
+Recording architecture reliability:
+~90–95%
+
+Overall reliability depends on:
+Ability to programmatically access live stream.
+
+If direct stream accessible:
+~80–90% stable overnight operation.
+
+If browser automation required:
+~60–75% stability.
+
+
+
+18 Design Intent
+
+This feature must:
+	•	Operate autonomously
+	•	Require zero overnight supervision
+	•	Prioritize recording stability
+	•	Produce clearly named archival files
+	•	Limit transcription resource usage
+	•	Recover from crashes
+	•	Be predictable and maintainable
+Sent from my iPhone

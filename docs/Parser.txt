@@ -1,0 +1,324 @@
+Card graph Parser
+
+Baseball Auction Transcript Parsing Tool
+
+Concise Functional & Data Model Summary
+
+
+1 Purpose
+
+Convert completed auction transcript into structured baseball card data.
+
+Input:
+	•	YYYYMMDD_AuctionName_FULL.txt
+
+Output:
+	•	Structured lot + card records in database
+	•	Optional JSON export
+	•	Optional CSV export
+
+Parsing runs only after transcription is complete.
+
+
+2 Core Hierarchy
+
+Session (Auction)
+  └── Lots
+        └── Lot Cards (1 or many)
+              ├── Player(s)
+              ├── Team(s)
+              ├── Position
+              ├── Maker
+              ├── Style
+              ├── Specialty
+              ├── Numbering
+              ├── Patch
+              ├── Short Print
+              ├── Autograph
+
+Core Tables
+
+
+sessions
+	•	id
+	•	auction_name
+	•	auction_date
+	•	status
+
+
+lots
+	•	id
+	•	session_id
+	•	lot_number
+	•	start_timestamp
+	•	end_timestamp
+	•	final_price
+	•	confidence_score
+
+
+lot_cards
+	•	id
+	•	lot_id
+	•	card_sequence_number
+	•	description_excerpt
+
+Supports:
+	•	Two-fer
+	•	Bundle
+	•	Multi-card lot
+
+
+4 Player Tables
+
+players
+	•	id
+	•	first_name
+	•	last_name
+	•	primary_position (e.g., OF, SS, P)
+	•	active (boolean)
+
+
+
+player_nicknames
+	•	id
+	•	player_id
+	•	nickname
+
+Example:
+	•	“The Kid” → Ken Griffey Jr.
+	•	“Big Papi” → David Ortiz
+“The big hurt”  Frank Thomas
+“PCA” Pete Crow Armstrong 
+
+
+
+player_statistics
+	•	player_id
+	•	last_season_stats (JSON)
+	•	overall_stats (JSON)
+	•	last_updated
+
+Example JSON:
+
+{
+  "avg": 0.287,
+  "hr": 31,
+  "rbi": 92
+}
+
+lot_card_players (junction)
+	•	lot_card_id
+	•	player_id
+
+Supports:
+	•	Dual autos
+	•	Combo cards
+	•	Team cards with multiple players
+
+
+5 Team Tables
+
+
+teams
+	•	id
+	•	team_name
+	•	city
+	•	active
+
+
+team_aliases
+	•	id
+	•	team_id
+	•	alias_name
+
+Examples:
+	•	“Yankees”
+	•	“Bombers”
+	•	“NY”
+“Indians” - Cleveland Guardians
+“Stros” - Houston Astros
+
+
+team_statistics
+	•	team_id
+	•	current_season_stats (JSON)
+	•	last_season_stats (JSON)
+	•	last_updated
+
+
+lot_card_teams (junction)
+	•	lot_card_id
+	•	team_id
+
+
+6 Card Attribute Tables
+
+All categories separated.
+
+
+card_makers
+	•	id
+	•	name
+(Topps, Bowman, Donruss, Panini, Upper Deck)
+
+
+lot_card_makers
+	•	lot_card_id
+	•	card_maker_id
+
+
+card_styles
+	•	id
+	•	style_name
+(Chrome, Sapphire, Refractor, Heritage, etc.)
+Refractors come in numerous colors and patterns, such as Blue (/150), Green (/99), Gold (/50), Orange (/25), Black (/10), Red (/5), and the 1/1 SuperFractor.  Refractor Variations: RayWave, Lava, Geometric, and Wave patterns.
+
+
+lot_card_styles
+	•	lot_card_id
+	•	card_style_id
+
+
+card_specialties
+	•	id
+	•	name
+(Die Cut, Booklet, Insert, Case Hit, Foil, Holographic,printing plate)
+
+
+
+lot_card_specialties
+	•	lot_card_id
+	•	card_specialty_id
+
+
+
+card_numbering
+	•	id
+	•	lot_card_id
+	•	is_numbered
+	•	serial_number
+	•	serial_total
+	•	raw_text
+
+Example:
+17/25 → serial_number=17, serial_total=25
+
+
+
+card_patches
+	•	id
+	•	lot_card_id
+	•	has_patch
+	•	patch_count - (single, dual, triple, quad)
+	•	patch_type - jersey, bat, base,etc.
+        Game used yes /no
+
+
+card_short_print
+	•	id
+	•	lot_card_id
+	•	is_short_print
+        is_super_short_print
+
+
+
+card_autographs
+	•	id
+	•	lot_card_id
+	•	is_autographed
+	•	autograph_type
+(on-card, sticker, unknown)
+
+
+card_graded
+The grade.  8.5
+The grading company
+
+
+
+7 Parsing Logic Summary (Baseball-Focused)
+
+For each lot:
+	1.	Detect lot boundary
+	2.	Detect card count (default=1)
+	3.	Extract player name or nickname
+	4.	Resolve nickname → player_id
+	5.	Detect team via alias table
+	6.	Detect position if spoken
+	7.	Extract maker
+	8.	Extract style
+	9.	Extract specialty
+	10.	Extract numbering (regex)
+	11.	Extract patch info
+	12.	Extract short print
+	13.	Extract autograph
+	14.	Extract grade info 
+	15.	Compute confidence score
+
+Parser is deterministic and rule-based.
+
+No transcript modification.
+
+
+
+8 Nickname Resolution Rules
+	1.	Try full name match
+	2.	Try nickname match
+	3.	If ambiguous → reduce confidence
+	4.	If unresolved → flag for review
+	5.	Never auto-create new player silently
+
+
+9 Multi-Card Lot Handling
+
+If transcript says:
+	•	“Two-fer”
+	•	“Both cards”
+	•	“Pair”
+	•	“Dual cards”
+Two cards
+
+Parser:
+	•	Creates multiple lot_cards
+	•	Assigns attributes appropriately
+	•	Links players individually
+
+
+
+10 Confidence Scoring
+
+Confidence increases with:
+	•	Player resolved
+	•	Team resolved
+	•	Maker detected
+	•	Numbering extracted
+	•	Final price detected
+
+Lots below threshold flagged in UI.
+
+11 Output
+
+Database populated.
+Optional file:
+
+YYYYMMDD_AuctionName_PARSED.json
+
+Structured by:
+	•	Auction
+	•	Lots
+	•	Cards
+	•	Attributes
+
+
+
+Final Summary
+
+The parse tool:
+	•	Converts baseball auction speech from transcription into normalized relational data
+	•	Supports nicknames for identifying players and teams 
+	•	Supports team aliases
+	•	Supports multi-card lots
+	•	Separates every attribute into its own table
+	•	Stores player and team statistics separately
+	•	Is deterministic and re-runnable
+	•	Does not interfere with recording/transcription

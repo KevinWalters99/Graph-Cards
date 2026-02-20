@@ -1,0 +1,46 @@
+PayPal tab with PayPal Detail tab and PayPal Assignment tab
+o	PayPal Detail tab should Download PayPal costs item level by date. This should be stored in a separate database table   Table should follow the rules and be completely sortable 
+o	PayPal Assignment tab should Reconcile by date and assign to specific auction to cost bucket 
+o	Automate by weekly costs to auto assign to campaign. Need to have a sign off before locking in. 
+o	Must have a way to reset or manually change. 
+o	We may have a PayPal purchase that may need to have portions going to separate sales sources. (Auction, eBay, Private-Collection). Default to apply all to Auction with the option of changing or splitting between sales sources. 
+
+Tax preparation tab
+o	Calculate monthly income & expense
+o	Calculate quarterly income & expense 
+o	Calculate year.
+o	Find best practices tax preparation 
+o	Generate pdf of financial tax preparation 
+o	Once locked in the tax specific information to be stored in a separate database table. This is what tax reports are run from. 
+o	Tax table records only deleted in development. Non destructive from application. 
+o	Application should perform checks before saving to tax table that year or quarter has not been done previously 
+
+I want to create a separate tab called Financial 
+o	With in tab. Financial Summary tab and Financial Details tab
+o	The Financial Summary tab should contain all common scoreboard from the dashboard. 
+o	The difference in the score board calculation costs to only use reconciled numbers. 
+o	Scoreboard to also include other sources for income 
+o	Scores to be orchestrated from Financial Details tab
+Financial Detail tab should have area for. Office expenses (lables, post-it notes, markers), post office mileage, mailers, advertising (auction bump), auction show setup materials and maintenance, phone 
+
+o	Bank payment reconciliation 
+o	Manual and upload options 
+o	This page should also delegate what numbers to use for tax.  We are generating a lot of numbers and some are specifically for reference and may be incomplete 
+
+Analytics tab to have additional subtab called Complete sales. 
+o	Should use Total sales from all sources approved from financial tab
+o	Should use only approved reconciled costs from financial tab
+o	Goals should be applied here as well 
+o	Need pie chart with total sales by sales source   Also one by profit 
+
+Offline (sales,purchase,trade)
+
+In the maintenance tab we need to add alerts & notifications 
+o	Within the tab a table with a Title, description, notification timing weekly (with definable day time) bi- weekly  (with definable day time) monthly first day (with definable day time) of the month , with active slider to turn on or off the slider, Alert or Notification selector. 
+o	Example ( Perform Auction Uploads, whatnot finance page download auction weekly details and upload into card graph application, weekly every Monday after 2:00pm cst, active, Alert)
+o	Each notification should be associated to an alert or notification. 
+o	In the alerts will be associated to an action and stay visible until action is taken. Notifications will show for period of time and can be closed. 
+o	In the example above the application would check for a recent upload to the auction table.  Until the upload is satisfied the alert will stay on the screen. 
+o	The alerts should provide guidance to remind specifically what is needed which should be the description in a tool tip window 
+o	Scroll on/off option -We also need the option for turning off and on with an application scroll. The scroll should have the options for:  score card information, player stats, teams status, analytics info
+

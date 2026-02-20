@@ -1,5 +1,5 @@
 /**
- * Card Graph - eBay Transactions Tab
+ * Card Graph - Email Transactions Tab
  */
 var Ebay = {
     initialized: false,
@@ -14,7 +14,7 @@ var Ebay = {
         if (!this.initialized) {
             panel.innerHTML = [
                 '<div class="page-header">',
-                '    <h1>eBay Transactions <span id="ebay-filter-desc" class="filter-description"></span></h1>',
+                '    <h1>Email Transactions <span id="ebay-filter-desc" class="filter-description"></span></h1>',
                 '    <button class="btn btn-primary" id="ebay-import-btn">Import Emails</button>',
                 '</div>',
                 '<div id="ebay-summary-cards" class="cards-grid"></div>',
