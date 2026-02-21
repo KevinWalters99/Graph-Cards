@@ -30,7 +30,7 @@ const LineItems = {
                     'Upload Earnings CSV',
                     '/api/uploads/earnings',
                     'Accepted format: month_day_month_day_year_earnings.csv',
-                    () => { this.loadData(); }
+                    () => { this.initialized = false; this.init(); }
                 );
             });
 

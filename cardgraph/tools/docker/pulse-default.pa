@@ -1,0 +1,10 @@
+#!/usr/bin/pulseaudio -nF
+
+# Minimal config for Docker container — no hardware, virtual sink only
+.fail
+
+load-module module-null-sink sink_name=virtual_sink sink_properties=device.description="VirtualSink"
+set-default-sink virtual_sink
+
+# Native protocol for pactl and client connections
+load-module module-native-protocol-unix

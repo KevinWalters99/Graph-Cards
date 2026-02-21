@@ -31,7 +31,7 @@ const Payouts = {
                     'Upload Payouts CSV',
                     '/api/uploads/payouts',
                     'Columns: Amount, Destination, Date Initiated, Arrival Date, Status',
-                    () => { this.loadData(); }
+                    () => { this.initialized = false; this.init(); }
                 );
             });
 

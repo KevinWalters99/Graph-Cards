@@ -19,6 +19,8 @@ var Maintenance = {
             if (isAdmin) {
                 parts.push('<button class="sub-tab" data-subtab="cost-matrix">Cost Matrix</button>');
                 parts.push('<button class="sub-tab" data-subtab="analytics-standards">Analytics Standards</button>');
+                parts.push('<button class="sub-tab" data-subtab="alerts">Alerts</button>');
+                parts.push('<button class="sub-tab" data-subtab="transcription">Transcription</button>');
                 parts.push('<button class="sub-tab" data-subtab="users">User Management</button>');
             }
             parts.push('</div>');
@@ -27,6 +29,8 @@ var Maintenance = {
             if (isAdmin) {
                 parts.push('<div id="maint-panel-cost-matrix" class="sub-panel" style="display:none;"></div>');
                 parts.push('<div id="maint-panel-analytics-standards" class="sub-panel" style="display:none;"></div>');
+                parts.push('<div id="maint-panel-alerts" class="sub-panel" style="display:none;"></div>');
+                parts.push('<div id="maint-panel-transcription" class="sub-panel" style="display:none;"></div>');
                 parts.push('<div id="maint-panel-users" class="sub-panel" style="display:none;"></div>');
             }
             panel.innerHTML = parts.join('\n');
@@ -63,7 +67,7 @@ var Maintenance = {
 
         var panels = ['uploads', 'statuses'];
         if (isAdmin) {
-            panels.push('cost-matrix', 'analytics-standards', 'users');
+            panels.push('cost-matrix', 'analytics-standards', 'alerts', 'transcription', 'users');
         }
         for (var j = 0; j < panels.length; j++) {
             var el = document.getElementById('maint-panel-' + panels[j]);
@@ -76,6 +80,8 @@ var Maintenance = {
         if (name === 'statuses') this.loadStatuses();
         if (name === 'cost-matrix' && isAdmin) CostMatrix.init();
         if (name === 'analytics-standards' && isAdmin) AnalyticsAdmin.init();
+        if (name === 'alerts' && isAdmin) AlertsAdmin.init();
+        if (name === 'transcription' && isAdmin) TranscriptionAdmin.init();
         if (name === 'users' && isAdmin) this.loadUsers();
     },
 

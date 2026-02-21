@@ -5,6 +5,12 @@ o	Automate by weekly costs to auto assign to campaign. Need to have a sign off b
 o	Must have a way to reset or manually change. 
 o	We may have a PayPal purchase that may need to have portions going to separate sales sources. (Auction, eBay, Private-Collection). Default to apply all to Auction with the option of changing or splitting between sales sources. 
 
+I have added a sample PayPal-2025-Download.csv for the formatting.
+I have also added a PayPal PDF file statement-Feb-2025.pdf for formatting reference.
+We would like to have the option of submitting one or the other.  Please review and provide your feedback if one is deficient.
+When updating our tables we must not duplicate transactions.  Please make sure that you fully understand the statements provided.
+
+
 Tax preparation tab
 o	Calculate monthly income & expense
 o	Calculate quarterly income & expense 

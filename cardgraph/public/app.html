@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Card Graph - Auction Tracker</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/app.css?v=20260220c">
 </head>
 <body>
     <div id="app">
@@ -34,6 +34,10 @@
                 <li data-tab="financial-summary">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                     Financial Summary
+                </li>
+                <li data-tab="paypal">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    PayPal
                 </li>
                 <li data-tab="analytics">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -66,12 +70,17 @@
                 <div class="spinner"></div>
             </div>
 
+            <!-- Alert bar + Scroll ticker (app-wide, above tab panels) -->
+            <div id="alert-bar"></div>
+            <div id="scroll-ticker" style="display:none;"></div>
+
             <!-- Tab content panels (rendered by JS) -->
             <div id="tab-dashboard" class="tab-panel active"></div>
             <div id="tab-line-items" class="tab-panel"></div>
             <div id="tab-top-buyers" class="tab-panel"></div>
             <div id="tab-payouts" class="tab-panel"></div>
             <div id="tab-financial-summary" class="tab-panel"></div>
+            <div id="tab-paypal" class="tab-panel"></div>
             <div id="tab-ebay" class="tab-panel"></div>
             <div id="tab-analytics" class="tab-panel"></div>
             <div id="tab-maintenance" class="tab-panel"></div>
@@ -87,22 +96,25 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/js/api.js"></script>
-    <script src="/js/filters.js"></script>
-    <script src="/js/table.js"></script>
-    <script src="/js/upload.js"></script>
-    <script src="/js/dashboard.js"></script>
-    <script src="/js/line-items.js"></script>
-    <script src="/js/payouts.js"></script>
-    <script src="/js/top-buyers.js"></script>
-    <script src="/js/financial-summary.js"></script>
-    <script src="/js/ebay.js"></script>
+    <script src="/js/api.js?v=20260220c"></script>
+    <script src="/js/filters.js?v=20260220c"></script>
+    <script src="/js/table.js?v=20260220c"></script>
+    <script src="/js/upload.js?v=20260220c"></script>
+    <script src="/js/dashboard.js?v=20260220c"></script>
+    <script src="/js/line-items.js?v=20260220c"></script>
+    <script src="/js/payouts.js?v=20260220c"></script>
+    <script src="/js/top-buyers.js?v=20260220c"></script>
+    <script src="/js/financial-summary.js?v=20260220c"></script>
+    <script src="/js/paypal.js?v=20260220c"></script>
+    <script src="/js/ebay.js?v=20260220c"></script>
     <script src="/js/vendor/chart.min.js"></script>
-    <script src="/js/analytics.js"></script>
-    <script src="/js/analytics-admin.js"></script>
-    <script src="/js/cost-matrix.js"></script>
-    <script src="/js/maintenance.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/app.js"></script>
+    <script src="/js/analytics.js?v=20260220c"></script>
+    <script src="/js/analytics-admin.js?v=20260220c"></script>
+    <script src="/js/cost-matrix.js?v=20260220c"></script>
+    <script src="/js/alerts.js?v=20260220c"></script>
+    <script src="/js/transcription.js?v=20260220c"></script>
+    <script src="/js/maintenance.js?v=20260220c"></script>
+    <script src="/js/auth.js?v=20260220c"></script>
+    <script src="/js/app.js?v=20260220c"></script>
 </body>
 </html>

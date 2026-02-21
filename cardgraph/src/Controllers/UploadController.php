@@ -141,6 +141,65 @@ class UploadController
     }
 
     /**
+     * POST /api/uploads/paypal
+     */
+    public function paypal(array $params = []): void
+    {
+        $userId = Auth::getUserId();
+        $secrets = $GLOBALS['cg_secrets'];
+
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $errorMsg = $this->getUploadErrorMessage($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE);
+            jsonError("Upload failed: {$errorMsg}", 400);
+        }
+
+        $file = $_FILES['file'];
+        $this->validateFile($file, $secrets['upload']);
+
+        $originalName = $file['name'];
+        $storedName = uniqid('paypal_', true) . '.csv';
+        $storedPath = $secrets['upload']['upload_dir'] . $storedName;
+
+        if (!move_uploaded_file($file['tmp_name'], $storedPath)) {
+            jsonError('Failed to store uploaded file', 500);
+        }
+
+        $uploadId = UploadLog::create([
+            'uploaded_by'       => $userId,
+            'original_filename' => $originalName,
+            'stored_filename'   => $storedName,
+            'upload_type'       => 'paypal',
+            'file_size_bytes'   => $file['size'],
+            'parsed_start_date' => null,
+            'parsed_end_date'   => null,
+        ]);
+
+        try {
+            UploadLog::updateStatus($uploadId, 'processing');
+
+            $parser = new PayPalCsvParser(cg_db(), $uploadId);
+            $result = $parser->parse($storedPath);
+
+            UploadLog::updateStatus($uploadId, 'completed', [
+                'row_count'     => $result['total_rows'],
+                'rows_inserted' => $result['rows_inserted'],
+                'rows_skipped'  => $result['rows_skipped'],
+            ]);
+
+            jsonResponse([
+                'upload_id'     => $uploadId,
+                'filename'      => $originalName,
+                'total_rows'    => $result['total_rows'],
+                'rows_inserted' => $result['rows_inserted'],
+                'rows_skipped'  => $result['rows_skipped'],
+            ], 201);
+        } catch (Exception $e) {
+            UploadLog::updateStatus($uploadId, 'failed', null, $e->getMessage());
+            jsonError('CSV processing failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * GET /api/uploads
      */
     public function list(array $params = []): void

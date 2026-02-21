@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(///192.168.0.215/web/cardgraph/**)",
+      "Read(///192.168.0.215/web/cardgraph/archive/2026/**)",
+      "Read(///192.168.0.215/web/cardgraph/archive/2026/20260220_S9_MAGS_AND_SLABS_2_STARTS/**)"
+    ],
+    "additionalDirectories": [
+      "\\\\192.168.0.215\\web\\cardgraph\\public",
+      "\\\\192.168.0.215\\web\\cardgraph\\src\\Controllers",
+      "\\\\192.168.0.215\\web\\cardgraph\\public\\css",
+      "\\\\192.168.0.215\\web\\cardgraph\\tools",
+      "\\\\192.168.0.215\\web\\cardgraph\\public\\js"
+    ]
+  }
+}

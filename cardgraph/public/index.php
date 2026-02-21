@@ -93,6 +93,52 @@ $router->get('/api/analytics/actuals',            ['AnalyticsController', 'getAc
 $router->get('/api/analytics/forecast',           ['AnalyticsController', 'getForecast']);
 $router->get('/api/analytics/pacing',             ['AnalyticsController', 'getPacing']);
 
+// === PayPal ===
+$router->get('/api/paypal/transactions',        ['PayPalController', 'listTransactions']);
+$router->get('/api/paypal/summary',             ['PayPalController', 'getSummary']);
+$router->get('/api/paypal/types',               ['PayPalController', 'getTypes']);
+$router->get('/api/paypal/transactions/{id}',   ['PayPalController', 'getTransaction']);
+$router->delete('/api/paypal/transactions/{id}',['PayPalController', 'deleteTransaction']);
+$router->post('/api/paypal/allocations',        ['PayPalController', 'assignTransaction']);
+$router->put('/api/paypal/allocations/{id}',    ['PayPalController', 'updateAllocation']);
+$router->delete('/api/paypal/allocations/{id}', ['PayPalController', 'deleteAllocation']);
+$router->post('/api/paypal/auto-assign',        ['PayPalController', 'autoAssign']);
+$router->post('/api/paypal/lock',               ['PayPalController', 'lockAllocations']);
+$router->post('/api/paypal/unlock',             ['PayPalController', 'unlockAllocations']);
+$router->get('/api/paypal/assignments/summary', ['PayPalController', 'getAssignmentSummary']);
+$router->post('/api/uploads/paypal',            ['UploadController', 'paypal']);
+
+// === Alerts & Notifications ===
+$router->get('/api/alerts',                  ['AlertController', 'listAlerts']);
+$router->post('/api/alerts',                 ['AlertController', 'createAlert']);
+$router->put('/api/alerts/{id}',             ['AlertController', 'updateAlert']);
+$router->delete('/api/alerts/{id}',          ['AlertController', 'deleteAlert']);
+$router->put('/api/alerts/{id}/toggle',      ['AlertController', 'toggleAlert']);
+$router->get('/api/alerts/active',           ['AlertController', 'getActiveAlerts']);
+$router->post('/api/alerts/{id}/dismiss',    ['AlertController', 'dismissAlert']);
+$router->get('/api/alerts/scroll',           ['AlertController', 'getScrollSettings']);
+$router->put('/api/alerts/scroll',           ['AlertController', 'updateScrollSettings']);
+$router->get('/api/alerts/scroll/data',      ['AlertController', 'getScrollData']);
+
+// === Transcription ===
+$router->get('/api/transcription/settings',             ['TranscriptionController', 'getSettings']);
+$router->put('/api/transcription/settings',             ['TranscriptionController', 'updateSettings']);
+$router->get('/api/transcription/sessions',             ['TranscriptionController', 'listSessions']);
+$router->post('/api/transcription/sessions',            ['TranscriptionController', 'createSession']);
+$router->get('/api/transcription/sessions/{id}',        ['TranscriptionController', 'getSession']);
+$router->put('/api/transcription/sessions/{id}',        ['TranscriptionController', 'updateSession']);
+$router->delete('/api/transcription/sessions/{id}',     ['TranscriptionController', 'deleteSession']);
+$router->post('/api/transcription/sessions/{id}/start', ['TranscriptionController', 'startSession']);
+$router->post('/api/transcription/sessions/{id}/stop',  ['TranscriptionController', 'stopSession']);
+$router->post('/api/transcription/sessions/{id}/cancel',['TranscriptionController', 'cancelSession']);
+$router->get('/api/transcription/sessions/{id}/status', ['TranscriptionController', 'getSessionStatus']);
+$router->get('/api/transcription/sessions/{id}/logs',   ['TranscriptionController', 'getSessionLogs']);
+$router->get('/api/transcription/env-check',            ['TranscriptionController', 'envCheck']);
+$router->post('/api/transcription/scheduler-tick',      ['TranscriptionController', 'schedulerTick'], false);
+$router->post('/api/transcription/cleanup',              ['TranscriptionController', 'cleanupExpired'], false);
+$router->post('/api/transcription/docker-build',        ['TranscriptionController', 'dockerBuild'], false);
+$router->get('/api/transcription/docker-build-status',  ['TranscriptionController', 'dockerBuildStatus'], false);
+
 // === Maintenance ===
 $router->get('/api/maintenance/upload-log', ['MaintenanceController', 'uploadLog']);
 

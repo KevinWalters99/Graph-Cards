@@ -34,6 +34,10 @@ const App = {
         // Logout button
         document.getElementById('logout-btn').addEventListener('click', () => AuthModule.logout());
 
+        // Load alerts & scroll ticker
+        Alerts.loadActive();
+        setInterval(function() { Alerts.loadActive(); }, 300000); // refresh every 5 min
+
         // Load initial tab
         this.switchTab('dashboard');
     },
@@ -70,6 +74,9 @@ const App = {
                 break;
             case 'ebay':
                 Ebay.init();
+                break;
+            case 'paypal':
+                PayPal.init();
                 break;
             case 'analytics':
                 Analytics.init();
