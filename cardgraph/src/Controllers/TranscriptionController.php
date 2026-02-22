@@ -63,7 +63,7 @@ class TranscriptionController
             'sample_rate'      => ['8000', '16000', '22050'],
             'audio_channels'   => ['mono', 'stereo'],
             'audio_format'     => ['wav', 'flac'],
-            'whisper_model'    => ['tiny', 'base'],
+            'whisper_model'    => ['tiny', 'base', 'small', 'medium', 'large'],
             'priority_mode'    => ['low', 'normal'],
             'folder_structure' => ['year-based', 'flat'],
             'acquisition_mode' => ['direct_stream', 'browser_automation'],
@@ -159,6 +159,34 @@ class TranscriptionController
         $dataStmt->execute($paged['params']);
         $rows = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Enrich with per-session segment transcription counts
+        if (!empty($rows)) {
+            $ids = array_map(fn($r) => (int) $r['session_id'], $rows);
+            $placeholders = implode(',', $ids);
+            $segStats = $pdo->query(
+                "SELECT session_id,
+                        SUM(CASE WHEN transcription_status = 'complete' THEN 1 ELSE 0 END) AS tx_complete,
+                        SUM(CASE WHEN transcription_status = 'pending' THEN 1 ELSE 0 END) AS tx_pending,
+                        SUM(CASE WHEN transcription_status = 'transcribing' THEN 1 ELSE 0 END) AS tx_active
+                 FROM CG_TranscriptionSegments
+                 WHERE session_id IN ({$placeholders})
+                 GROUP BY session_id"
+            )->fetchAll(PDO::FETCH_ASSOC);
+
+            $statsMap = [];
+            foreach ($segStats as $st) {
+                $statsMap[(int) $st['session_id']] = $st;
+            }
+
+            foreach ($rows as &$row) {
+                $sid = (int) $row['session_id'];
+                $row['tx_complete'] = (int) ($statsMap[$sid]['tx_complete'] ?? 0);
+                $row['tx_pending']  = (int) ($statsMap[$sid]['tx_pending'] ?? 0);
+                $row['tx_active']   = (int) ($statsMap[$sid]['tx_active'] ?? 0);
+            }
+            unset($row);
+        }
+
         jsonResponse([
             'data'  => $rows,
             'total' => $total,
@@ -235,6 +263,13 @@ class TranscriptionController
             jsonError('Session not found', 404);
         }
 
+        // Effective segment length (override or global)
+        $segLen = $session['override_segment_length'];
+        if (!$segLen) {
+            $global = $pdo->query("SELECT segment_length_minutes FROM CG_TranscriptionSettings WHERE setting_id = 1")->fetch(PDO::FETCH_ASSOC);
+            $segLen = (int) ($global['segment_length_minutes'] ?? 15);
+        }
+
         // Segments
         $segStmt = $pdo->prepare(
             "SELECT * FROM CG_TranscriptionSegments
@@ -255,9 +290,10 @@ class TranscriptionController
         $logs = $logStmt->fetchAll(PDO::FETCH_ASSOC);
 
         jsonResponse([
-            'session'  => $session,
-            'segments' => $segments,
-            'logs'     => $logs,
+            'session'            => $session,
+            'segments'           => $segments,
+            'logs'               => $logs,
+            'segment_length_min' => (int) $segLen,
         ]);
     }
 
@@ -285,8 +321,12 @@ class TranscriptionController
 
         $scheduledStart = !empty($body['scheduled_start']) ? parseDatetime($body['scheduled_start']) : null;
 
-        // Reset status back to scheduled when editing an error/completed/cancelled session
-        $resetStatus = ($session['status'] !== 'scheduled') ? 'scheduled' : null;
+        // Only reset status to 'scheduled' if the scheduled start time is being changed
+        // (editing just the name should NOT reset a completed/stopped session)
+        $resetStatus = null;
+        if (!empty($body['scheduled_start']) && in_array($session['status'], ['error', 'stopped'], true)) {
+            $resetStatus = 'scheduled';
+        }
 
         $stmt = $pdo->prepare(
             "UPDATE CG_TranscriptionSessions SET
@@ -452,7 +492,7 @@ class TranscriptionController
             // Update session status to pending_start
             $upd = $pdo->prepare(
                 "UPDATE CG_TranscriptionSessions
-                 SET status = 'recording', actual_start_time = NOW()
+                 SET status = 'recording'
                  WHERE session_id = :id"
             );
             $upd->execute([':id' => $id]);
@@ -485,7 +525,7 @@ class TranscriptionController
         // Update session status
         $upd = $pdo->prepare(
             "UPDATE CG_TranscriptionSessions
-             SET status = 'recording', actual_start_time = NOW()
+             SET status = 'recording'
              WHERE session_id = :id"
         );
         $upd->execute([':id' => $id]);
@@ -568,7 +608,7 @@ class TranscriptionController
 
         $stmt = $pdo->prepare(
             "SELECT session_id, status, actual_start_time, end_time,
-                    total_segments, total_duration_sec
+                    total_segments, total_duration_sec, override_segment_length
              FROM CG_TranscriptionSessions WHERE session_id = :id"
         );
         $stmt->execute([':id' => $id]);
@@ -576,6 +616,13 @@ class TranscriptionController
 
         if (!$session) {
             jsonError('Session not found', 404);
+        }
+
+        // Effective segment length
+        $segLen = $session['override_segment_length'];
+        if (!$segLen) {
+            $global = $pdo->query("SELECT segment_length_minutes FROM CG_TranscriptionSettings WHERE setting_id = 1")->fetch(PDO::FETCH_ASSOC);
+            $segLen = (int) ($global['segment_length_minutes'] ?? 15);
         }
 
         // Segment summary
@@ -602,11 +649,23 @@ class TranscriptionController
             $elapsed = $end->getTimestamp() - $start->getTimestamp();
         }
 
+        // Active segment started_at (for real-time progress bar)
+        $activeSegStmt = $pdo->prepare(
+            "SELECT started_at FROM CG_TranscriptionSegments
+             WHERE session_id = :id AND recording_status = 'recording'
+             ORDER BY segment_number DESC LIMIT 1"
+        );
+        $activeSegStmt->execute([':id' => $id]);
+        $activeSeg = $activeSegStmt->fetch(PDO::FETCH_ASSOC);
+
         jsonResponse([
-            'session_id'    => (int) $session['session_id'],
-            'status'        => $session['status'],
-            'elapsed_sec'   => $elapsed,
-            'segments'      => $segSummary,
+            'session_id'        => (int) $session['session_id'],
+            'status'            => $session['status'],
+            'elapsed_sec'       => $elapsed,
+            'segments'          => $segSummary,
+            'segment_length_min'=> (int) $segLen,
+            'active_seg_started'=> $activeSeg ? $activeSeg['started_at'] : null,
+            'server_time'       => date('Y-m-d H:i:s'),
         ]);
     }
 
@@ -863,7 +922,7 @@ class TranscriptionController
                 file_put_contents($requestFile, date('Y-m-d H:i:s'));
 
                 $pdo->prepare(
-                    "UPDATE CG_TranscriptionSessions SET status = 'recording', actual_start_time = NOW()
+                    "UPDATE CG_TranscriptionSessions SET status = 'recording'
                      WHERE session_id = :id"
                 )->execute([':id' => $id]);
 
@@ -882,7 +941,7 @@ class TranscriptionController
             shell_exec('nohup sh -c ' . escapeshellarg($cmd) . ' > /dev/null 2>&1 &');
 
             $pdo->prepare(
-                "UPDATE CG_TranscriptionSessions SET status = 'recording', actual_start_time = NOW()
+                "UPDATE CG_TranscriptionSessions SET status = 'recording'
                  WHERE session_id = :id"
             )->execute([':id' => $id]);
 
@@ -1050,6 +1109,999 @@ class TranscriptionController
             'log_tail'        => $tail,
             'log_lines_total' => count($logLines),
         ]);
+    }
+
+    // ─── Table Transcriptions (Parse transcript text → card records) ─────
+
+    /**
+     * POST /api/transcription/sessions/{id}/parse — Parse transcript text into card records.
+     */
+    public function parseSession(array $params = []): void
+    {
+        Auth::requireAdmin();
+        $userId = Auth::getUserId();
+        $sessionId = (int) ($params['id'] ?? 0);
+        $pdo = cg_db();
+
+        // Verify session exists
+        $stmt = $pdo->prepare("SELECT session_id, session_dir, status FROM CG_TranscriptionSessions WHERE session_id = :id");
+        $stmt->execute([':id' => $sessionId]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$session) {
+            jsonError('Session not found', 404);
+        }
+
+        // Load segment transcripts from disk
+        $segStmt = $pdo->prepare(
+            "SELECT segment_id, segment_number, filename_transcript,
+                    started_at, duration_seconds
+             FROM CG_TranscriptionSegments
+             WHERE session_id = :id AND transcription_status = 'complete'
+             ORDER BY segment_number ASC"
+        );
+        $segStmt->execute([':id' => $sessionId]);
+        $segments = $segStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($segments)) {
+            jsonError('No completed transcript segments found for this session', 400);
+        }
+
+        // Read and concatenate transcript text
+        $fullText = '';
+        $segmentBoundaries = []; // [char_offset => segment_id, segment_number, timing]
+        $sessionDir = rtrim($session['session_dir'], '/');
+
+        foreach ($segments as $seg) {
+            $filePath = $sessionDir . '/transcripts/' . $seg['filename_transcript'];
+            if (!file_exists($filePath)) {
+                continue;
+            }
+            $text = file_get_contents($filePath);
+            if ($text === false || trim($text) === '') {
+                continue;
+            }
+
+            $offset = strlen($fullText);
+            $textLen = strlen($text) + 1; // +1 for the space we prepend
+            $segmentBoundaries[] = [
+                'offset'           => $offset,
+                'text_length'      => $textLen,
+                'segment_id'       => (int) $seg['segment_id'],
+                'segment_number'   => (int) $seg['segment_number'],
+                'started_at'       => $seg['started_at'],
+                'duration_seconds' => (int) ($seg['duration_seconds'] ?? 0),
+            ];
+
+            $fullText .= ' ' . $text;
+        }
+
+        $fullText = trim($fullText);
+        if (strlen($fullText) < 50) {
+            jsonError('Transcript text too short to parse', 400);
+        }
+
+        // Create parse run
+        $runStmt = $pdo->prepare(
+            "INSERT INTO CG_TranscriptionParseRuns (session_id, status, run_by)
+             VALUES (:sid, 'running', :uid)"
+        );
+        $runStmt->execute([':sid' => $sessionId, ':uid' => $userId]);
+        $runId = (int) $pdo->lastInsertId();
+
+        try {
+            // Load reference data
+            $refData = $this->loadReferenceData($pdo);
+
+            // Run player-anchored extraction
+            $records = $this->extractCardRecords($fullText, $refData, $segmentBoundaries);
+
+            // Use transaction for bulk delete + insert (avoids per-row fsync)
+            $pdo->beginTransaction();
+
+            // Delete previous records for this session (fresh parse)
+            $pdo->prepare("DELETE FROM CG_TranscriptionRecords WHERE session_id = :sid AND run_id != :rid")
+                ->execute([':sid' => $sessionId, ':rid' => $runId]);
+
+            // Insert records
+            $insertStmt = $pdo->prepare(
+                "INSERT INTO CG_TranscriptionRecords (
+                    run_id, session_id, sequence_number,
+                    player_id, team_id, maker_id, style_id, specialty_id,
+                    raw_player, raw_team, raw_maker, raw_style, raw_specialty,
+                    raw_parallel, raw_card_number,
+                    lot_number, is_rookie, is_autograph, is_relic, is_giveaway,
+                    confidence, raw_text_excerpt, segment_id, segment_number,
+                    text_position, estimated_at
+                ) VALUES (
+                    :run_id, :session_id, :seq,
+                    :player_id, :team_id, :maker_id, :style_id, :specialty_id,
+                    :raw_player, :raw_team, :raw_maker, :raw_style, :raw_specialty,
+                    :raw_parallel, :raw_card_number,
+                    :lot_number, :is_rookie, :is_autograph, :is_relic, :is_giveaway,
+                    :confidence, :excerpt, :segment_id, :segment_number,
+                    :text_position, :estimated_at
+                )"
+            );
+
+            $seq = 0;
+            $highConf = 0;
+            $lowConf = 0;
+            foreach ($records as $rec) {
+                $seq++;
+                $conf = (float) $rec['confidence'];
+                if ($conf >= 0.7) { $highConf++; } else { $lowConf++; }
+
+                // Find segment for this text position and calculate estimated timestamp
+                $segId = null;
+                $segNum = null;
+                $estimatedAt = null;
+                foreach (array_reverse($segmentBoundaries) as $boundary) {
+                    if ($rec['text_position'] >= $boundary['offset']) {
+                        $segId = $boundary['segment_id'];
+                        $segNum = $boundary['segment_number'];
+
+                        // Interpolate timestamp within segment
+                        if ($boundary['started_at'] && $boundary['duration_seconds'] > 0 && $boundary['text_length'] > 0) {
+                            $posInSegment = $rec['text_position'] - $boundary['offset'];
+                            $fraction = $posInSegment / $boundary['text_length'];
+                            $fraction = max(0, min(1, $fraction)); // clamp 0-1
+                            $offsetSec = (int) round($fraction * $boundary['duration_seconds']);
+                            $ts = new \DateTime($boundary['started_at']);
+                            $ts->modify("+{$offsetSec} seconds");
+                            $estimatedAt = $ts->format('Y-m-d H:i:s');
+                        }
+                        break;
+                    }
+                }
+
+                $insertStmt->execute([
+                    ':run_id'       => $runId,
+                    ':session_id'   => $sessionId,
+                    ':seq'          => $seq,
+                    ':player_id'    => $rec['player_id'],
+                    ':team_id'      => $rec['team_id'],
+                    ':maker_id'     => $rec['maker_id'],
+                    ':style_id'     => $rec['style_id'],
+                    ':specialty_id' => $rec['specialty_id'],
+                    ':raw_player'   => $rec['raw_player'],
+                    ':raw_team'     => $rec['raw_team'],
+                    ':raw_maker'    => $rec['raw_maker'],
+                    ':raw_style'    => $rec['raw_style'],
+                    ':raw_specialty'=> $rec['raw_specialty'],
+                    ':raw_parallel' => $rec['raw_parallel'],
+                    ':raw_card_number' => $rec['raw_card_number'],
+                    ':lot_number'   => $rec['lot_number'],
+                    ':is_rookie'    => $rec['is_rookie'] ? 1 : 0,
+                    ':is_autograph' => $rec['is_autograph'] ? 1 : 0,
+                    ':is_relic'     => $rec['is_relic'] ? 1 : 0,
+                    ':is_giveaway'  => $rec['is_giveaway'] ? 1 : 0,
+                    ':confidence'   => $conf,
+                    ':excerpt'      => $rec['excerpt'],
+                    ':segment_id'   => $segId,
+                    ':segment_number' => $segNum,
+                    ':text_position' => $rec['text_position'],
+                    ':estimated_at' => $estimatedAt,
+                ]);
+            }
+
+            $pdo->commit();
+
+            // Update parse run
+            $pdo->prepare(
+                "UPDATE CG_TranscriptionParseRuns
+                 SET status = 'complete', total_records = :total,
+                     high_confidence = :high, low_confidence = :low,
+                     completed_at = NOW()
+                 WHERE run_id = :rid"
+            )->execute([
+                ':total' => $seq,
+                ':high'  => $highConf,
+                ':low'   => $lowConf,
+                ':rid'   => $runId,
+            ]);
+
+            jsonResponse([
+                'run_id'          => $runId,
+                'total_records'   => $seq,
+                'high_confidence' => $highConf,
+                'low_confidence'  => $lowConf,
+            ]);
+
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $pdo->prepare(
+                "UPDATE CG_TranscriptionParseRuns
+                 SET status = 'error', error_message = :msg, completed_at = NOW()
+                 WHERE run_id = :rid"
+            )->execute([':msg' => $e->getMessage(), ':rid' => $runId]);
+
+            jsonError('Parse failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * GET /api/transcription/sessions/{id}/records — List parsed card records.
+     */
+    public function listRecords(array $params = []): void
+    {
+        Auth::getUserId();
+        $sessionId = (int) ($params['id'] ?? 0);
+        $pdo = cg_db();
+
+        $runId = !empty($_GET['run_id']) ? (int) $_GET['run_id'] : null;
+        $minConf = isset($_GET['min_confidence']) ? (float) $_GET['min_confidence'] : null;
+
+        // Default to latest run if not specified
+        if (!$runId) {
+            $latest = $pdo->prepare(
+                "SELECT run_id FROM CG_TranscriptionParseRuns
+                 WHERE session_id = :sid AND status = 'complete'
+                 ORDER BY run_id DESC LIMIT 1"
+            );
+            $latest->execute([':sid' => $sessionId]);
+            $row = $latest->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                jsonResponse(['data' => [], 'total' => 0, 'run_id' => null]);
+                return;
+            }
+            $runId = (int) $row['run_id'];
+        }
+
+        $sql = "SELECT r.*,
+                    CONCAT(p.first_name, ' ', p.last_name) AS player_name,
+                    t.team_name, t.abbreviation AS team_abbr, t.mlb_id AS team_mlb_id,
+                    m.name AS maker_name,
+                    s.style_name,
+                    sp.name AS specialty_name
+                FROM CG_TranscriptionRecords r
+                LEFT JOIN CG_Players p ON p.player_id = r.player_id
+                LEFT JOIN CG_Teams t ON t.team_id = r.team_id
+                LEFT JOIN CG_CardMakers m ON m.maker_id = r.maker_id
+                LEFT JOIN CG_CardStyles s ON s.style_id = r.style_id
+                LEFT JOIN CG_CardSpecialties sp ON sp.specialty_id = r.specialty_id
+                WHERE r.run_id = :rid AND r.session_id = :sid";
+
+        $execParams = [':rid' => $runId, ':sid' => $sessionId];
+
+        if ($minConf !== null) {
+            $sql .= " AND r.confidence >= :minconf";
+            $execParams[':minconf'] = $minConf;
+        }
+
+        $sql .= " ORDER BY r.sequence_number ASC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($execParams);
+        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        jsonResponse([
+            'data'   => $records,
+            'total'  => count($records),
+            'run_id' => $runId,
+        ]);
+    }
+
+    /**
+     * PUT /api/transcription/records/{id} — Update a parsed record (inline edit).
+     */
+    public function updateRecord(array $params = []): void
+    {
+        Auth::requireAdmin();
+        $userId = Auth::getUserId();
+        $recordId = (int) ($params['id'] ?? 0);
+        $body = getJsonBody();
+        $pdo = cg_db();
+
+        // Verify record exists
+        $stmt = $pdo->prepare("SELECT record_id FROM CG_TranscriptionRecords WHERE record_id = :id");
+        $stmt->execute([':id' => $recordId]);
+        if (!$stmt->fetch()) {
+            jsonError('Record not found', 404);
+        }
+
+        // Allowed update fields
+        $allowed = [
+            'player_id', 'team_id', 'maker_id', 'style_id', 'specialty_id',
+            'raw_parallel', 'raw_card_number',
+            'lot_number', 'is_rookie', 'is_autograph', 'is_relic', 'is_giveaway',
+            'is_verified', 'notes',
+        ];
+
+        $sets = [];
+        $execParams = [':id' => $recordId];
+        foreach ($allowed as $field) {
+            if (array_key_exists($field, $body)) {
+                $sets[] = "$field = :$field";
+                $val = $body[$field];
+                // Handle nullable FK fields
+                if (in_array($field, ['player_id', 'team_id', 'maker_id', 'style_id', 'specialty_id', 'lot_number'])) {
+                    $val = ($val === '' || $val === null) ? null : (int) $val;
+                }
+                if (in_array($field, ['is_rookie', 'is_autograph', 'is_relic', 'is_giveaway', 'is_verified'])) {
+                    $val = $val ? 1 : 0;
+                }
+                $execParams[":$field"] = $val;
+            }
+        }
+
+        if (empty($sets)) {
+            jsonError('No valid fields to update', 400);
+        }
+
+        // Set verified_by when marking as verified
+        if (isset($body['is_verified']) && $body['is_verified']) {
+            $sets[] = "verified_by = :vby";
+            $execParams[':vby'] = $userId;
+        }
+
+        $sql = "UPDATE CG_TranscriptionRecords SET " . implode(', ', $sets) . " WHERE record_id = :id";
+        $pdo->prepare($sql)->execute($execParams);
+
+        jsonResponse(['success' => true]);
+    }
+
+    /**
+     * DELETE /api/transcription/records/{id} — Delete a parsed record.
+     */
+    public function deleteRecord(array $params = []): void
+    {
+        Auth::requireAdmin();
+        $recordId = (int) ($params['id'] ?? 0);
+        $pdo = cg_db();
+
+        $stmt = $pdo->prepare("DELETE FROM CG_TranscriptionRecords WHERE record_id = :id");
+        $stmt->execute([':id' => $recordId]);
+
+        if ($stmt->rowCount() === 0) {
+            jsonError('Record not found', 404);
+        }
+
+        jsonResponse(['success' => true]);
+    }
+
+    /**
+     * GET /api/transcription/sessions/{id}/transcript-text — Full concatenated transcript.
+     */
+    public function getTranscriptText(array $params = []): void
+    {
+        Auth::getUserId();
+        $sessionId = (int) ($params['id'] ?? 0);
+        $pdo = cg_db();
+
+        $stmt = $pdo->prepare("SELECT session_dir FROM CG_TranscriptionSessions WHERE session_id = :id");
+        $stmt->execute([':id' => $sessionId]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$session) {
+            jsonError('Session not found', 404);
+        }
+
+        $segStmt = $pdo->prepare(
+            "SELECT segment_number, filename_transcript
+             FROM CG_TranscriptionSegments
+             WHERE session_id = :id AND transcription_status = 'complete'
+             ORDER BY segment_number ASC"
+        );
+        $segStmt->execute([':id' => $sessionId]);
+        $segments = $segStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $sessionDir = rtrim($session['session_dir'], '/');
+        $parts = [];
+        foreach ($segments as $seg) {
+            $filePath = $sessionDir . '/transcripts/' . $seg['filename_transcript'];
+            if (!file_exists($filePath)) continue;
+            $text = file_get_contents($filePath);
+            if ($text === false || trim($text) === '') continue;
+            $parts[] = [
+                'segment_number' => (int) $seg['segment_number'],
+                'text' => trim($text),
+            ];
+        }
+
+        jsonResponse([
+            'session_id' => $sessionId,
+            'segments'   => $parts,
+            'total_chars' => array_sum(array_map(fn($p) => strlen($p['text']), $parts)),
+        ]);
+    }
+
+    /**
+     * GET /api/transcription/sessions/{id}/parse-runs — List all parse runs for a session.
+     */
+    public function listParseRuns(array $params = []): void
+    {
+        Auth::getUserId();
+        $sessionId = (int) ($params['id'] ?? 0);
+        $pdo = cg_db();
+
+        $stmt = $pdo->prepare(
+            "SELECT pr.*, u.display_name AS run_by_name
+             FROM CG_TranscriptionParseRuns pr
+             LEFT JOIN CG_Users u ON u.user_id = pr.run_by
+             WHERE pr.session_id = :sid
+             ORDER BY pr.run_id DESC"
+        );
+        $stmt->execute([':sid' => $sessionId]);
+        $runs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        jsonResponse(['data' => $runs]);
+    }
+
+    /**
+     * POST /api/transcription/sessions/{id}/transcribe — Launch Whisper worker for pending segments.
+     */
+    public function transcribeSession(array $params = []): void
+    {
+        Auth::requireAdmin();
+        $sessionId = (int) ($params['id'] ?? 0);
+        $pdo = cg_db();
+
+        // Verify session exists and get session_dir
+        $stmt = $pdo->prepare(
+            "SELECT session_id, session_dir, status FROM CG_TranscriptionSessions WHERE session_id = :id"
+        );
+        $stmt->execute([':id' => $sessionId]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$session) {
+            jsonError('Session not found', 404);
+        }
+
+        // Reset skipped/error segments back to pending so they can be retried
+        $reset = $pdo->prepare(
+            "UPDATE CG_TranscriptionSegments
+             SET transcription_status = 'pending', error_message = NULL
+             WHERE session_id = :id AND recording_status = 'complete'
+               AND transcription_status IN ('skipped', 'error')"
+        );
+        $reset->execute([':id' => $sessionId]);
+        $resetCount = $reset->rowCount();
+
+        // Count pending segments (includes freshly reset ones)
+        $pending = $pdo->prepare(
+            "SELECT COUNT(*) FROM CG_TranscriptionSegments
+             WHERE session_id = :id AND recording_status = 'complete'
+               AND transcription_status = 'pending'"
+        );
+        $pending->execute([':id' => $sessionId]);
+        $pendingCount = (int) $pending->fetchColumn();
+
+        if ($pendingCount === 0) {
+            jsonError('No pending segments to transcribe', 400);
+        }
+
+        // Find Whisper python binary (venv first, then system)
+        $toolsDir = realpath(__DIR__ . '/../../tools');
+        $venvPy = $toolsDir . '/whisper_venv/bin/python3';
+        $workerScript = $toolsDir . '/transcription_worker.py';
+
+        if (!file_exists($workerScript)) {
+            jsonError('transcription_worker.py not found', 500);
+        }
+
+        // Determine python binary (venv has Whisper installed)
+        $pythonBin = file_exists($venvPy) ? $venvPy : null;
+        if (!$pythonBin) {
+            // Fallback: check system python
+            exec('python3 -c "import whisper" 2>/dev/null', $out, $ret);
+            if ($ret === 0) {
+                $pythonBin = 'python3';
+            }
+        }
+        if (!$pythonBin) {
+            jsonError('Whisper not installed on server. Use the PC Worker instead.', 500);
+        }
+
+        // Pick Whisper model: request body > settings > 'base'
+        $body = getJsonBody();
+        $preferredModel = !empty($body['model']) ? $body['model'] : null;
+        if (!$preferredModel) {
+            $settings = $pdo->query(
+                "SELECT whisper_model FROM CG_TranscriptionSettings WHERE setting_id = 1"
+            )->fetch(PDO::FETCH_ASSOC);
+            $preferredModel = $settings['whisper_model'] ?? 'base';
+        }
+        $modelCache = $toolsDir . '/whisper_models';
+
+        // Check if preferred model is available, otherwise use what we have
+        $model = $preferredModel;
+        if (is_dir($modelCache) && !file_exists($modelCache . '/' . $preferredModel . '.pt')) {
+            // Find any available model, prefer larger ones
+            $available = [];
+            foreach (['large', 'medium', 'small', 'base', 'tiny'] as $m) {
+                if (file_exists($modelCache . '/' . $m . '.pt')) {
+                    $available[] = $m;
+                }
+            }
+            $model = !empty($available) ? $available[0] : 'base';
+        }
+
+        // Launch worker in background
+        $lockFile = $toolsDir . '/transcription_session_' . $sessionId . '.lock';
+        $outputFile = $toolsDir . '/transcription_session_' . $sessionId . '.out';
+
+        if (file_exists($lockFile)) {
+            jsonError('Transcription already in progress for this session', 409);
+        }
+
+        $cmd = $pythonBin . ' ' . escapeshellarg($workerScript)
+             . ' --session-id ' . $sessionId
+             . ' --session-dir ' . escapeshellarg($session['session_dir'])
+             . ' --model ' . escapeshellarg($model)
+             . ' > ' . escapeshellarg($outputFile) . ' 2>&1'
+             . '; rm -f ' . escapeshellarg($lockFile);
+
+        shell_exec('touch ' . escapeshellarg($lockFile));
+        shell_exec('nohup sh -c ' . escapeshellarg($cmd) . ' > /dev/null 2>&1 &');
+
+        $this->insertLog($pdo, $sessionId, 'info', 'transcribe_triggered',
+            "Manual transcription triggered ($pendingCount pending segments, model: $model)");
+
+        jsonResponse([
+            'ok'             => true,
+            'pending_count'  => $pendingCount,
+            'model'          => $model,
+            'message'        => "Transcription started for $pendingCount pending segment(s)",
+        ]);
+    }
+
+    // ─── Parsing Engine Helpers ──────────────────────────────────
+
+    /**
+     * Load all reference data for fuzzy matching.
+     */
+    private function loadReferenceData(PDO $pdo): array
+    {
+        // Players: all active + inactive with popularity (catches retired stars like Kershaw)
+        $players = $pdo->query(
+            "SELECT p.player_id, p.first_name, p.last_name,
+                    p.current_team_id AS team_id,
+                    COALESCE(p.popularity_score, 0) AS popularity
+             FROM CG_Players p
+             WHERE p.is_active = 1 OR p.popularity_score > 0"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $nicknames = $pdo->query(
+            "SELECT n.player_id, n.nickname FROM CG_PlayerNicknames n"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        // Common words that appear in auction talk but are also player last names.
+        // These are excluded from single-word last-name matching to reduce false positives.
+        $lastNameStopWords = array_flip([
+            'black', 'green', 'blue', 'gold', 'rose', 'white', 'brown', 'gray', 'grey',
+            'long', 'short', 'young', 'best', 'king', 'love', 'cash', 'ball', 'page',
+            'hope', 'holiday', 'price', 'rich', 'hand', 'hall', 'bell', 'lamb',
+            'field', 'reed', 'dean', 'dale', 'lane', 'star', 'ford',
+        ]);
+
+        // Name suffixes to strip for alternate indexing (e.g. "Harris II" → also index "Harris")
+        $nameSuffixes = [' ii', ' iii', ' iv', ' jr', ' jr.', ' sr', ' sr.'];
+
+        // Build name dictionary: normalized_name => [player_id, team_id, match_type, popularity]
+        $nameDict = [];
+        foreach ($players as $p) {
+            $first = mb_strtolower(trim($p['first_name']));
+            $last  = mb_strtolower(trim($p['last_name']));
+            $full  = $first . ' ' . $last;
+            $pop   = (int) $p['popularity'];
+            $entry = [
+                'player_id'  => (int) $p['player_id'],
+                'team_id'    => $p['team_id'] ? (int) $p['team_id'] : null,
+                'display'    => $p['first_name'] . ' ' . $p['last_name'],
+                'popularity' => $pop,
+            ];
+
+            // Full name: prefer higher popularity when names collide
+            if (!isset($nameDict[$full]) || $pop > ($nameDict[$full]['popularity'] ?? 0)) {
+                $nameDict[$full] = $entry + ['type' => 'full'];
+            }
+
+            // Also index without suffix (e.g. "michael harris" for "Michael Harris II")
+            $lastBase = $last;
+            foreach ($nameSuffixes as $sfx) {
+                if (str_ends_with($last, $sfx)) {
+                    $lastBase = rtrim(substr($last, 0, -strlen($sfx)));
+                    $altFull = $first . ' ' . $lastBase;
+                    if (!isset($nameDict[$altFull]) || $pop > ($nameDict[$altFull]['popularity'] ?? 0)) {
+                        $nameDict[$altFull] = $entry + ['type' => 'full'];
+                    }
+                    break;
+                }
+            }
+
+            // Last name index: skip stop words, prefer highest popularity
+            if (strlen($lastBase) >= 4 && !isset($lastNameStopWords[$lastBase])) {
+                $key = '_last_' . $lastBase;
+                if (!isset($nameDict[$key]) || $pop > ($nameDict[$key]['popularity'] ?? 0)) {
+                    $nameDict[$key] = $entry + ['type' => 'last'];
+                }
+            }
+
+            // First name index for popular players — catches cases where Whisper
+            // mangles the last name but first name is distinctive (e.g. "Clayton Curzong" → Kershaw)
+            if ($pop > 0 && strlen($first) >= 4 && !isset($lastNameStopWords[$first])) {
+                $key = '_last_' . $first;
+                if (!isset($nameDict[$key]) || $pop > ($nameDict[$key]['popularity'] ?? 0)) {
+                    $nameDict[$key] = $entry + ['type' => 'last'];
+                }
+            }
+        }
+
+        // Add nicknames
+        $nicknameMap = [];
+        foreach ($nicknames as $n) {
+            $nicknameMap[mb_strtolower(trim($n['nickname']))] = (int) $n['player_id'];
+        }
+
+        // Makers
+        $makers = [];
+        foreach ($pdo->query("SELECT maker_id, name FROM CG_CardMakers WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC) as $m) {
+            $makers[mb_strtolower($m['name'])] = (int) $m['maker_id'];
+        }
+        // Common Whisper misspellings for makers
+        $makerAliases = [
+            'tops'     => 'topps',
+            'topped'   => 'topps',
+            "topped's" => 'topps',
+            "topp's"   => 'topps',
+            'topscale' => 'topps',
+            'bowmen'   => 'bowman',
+            'bow man'  => 'bowman',
+            'donrus'   => 'donruss',
+            'panany'   => 'panini',
+            'pennini'  => 'panini',
+        ];
+
+        // Styles
+        $styles = [];
+        foreach ($pdo->query("SELECT style_id, style_name FROM CG_CardStyles WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC) as $s) {
+            $styles[mb_strtolower($s['style_name'])] = (int) $s['style_id'];
+        }
+        // Common Whisper misspellings for styles
+        $styleAliases = [
+            'chroma'    => 'chrome',
+            'krome'     => 'chrome',
+            'saphire'   => 'sapphire',
+            'saphier'   => 'sapphire',
+            'prism'     => 'prizm',
+            'prison'    => 'prizm',
+        ];
+
+        // Specialties
+        $specialties = [];
+        foreach ($pdo->query("SELECT specialty_id, name FROM CG_CardSpecialties WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC) as $sp) {
+            $specialties[mb_strtolower($sp['name'])] = (int) $sp['specialty_id'];
+        }
+
+        // Teams (for team_id lookup by abbreviation/name)
+        $teams = [];
+        foreach ($pdo->query("SELECT team_id, team_name, abbreviation FROM CG_Teams WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC) as $t) {
+            if ($t['abbreviation']) {
+                $teams[mb_strtolower($t['abbreviation'])] = (int) $t['team_id'];
+            }
+            $teams[mb_strtolower($t['team_name'])] = (int) $t['team_id'];
+        }
+
+        // Build prefix index for fuzzy matching (first 2 chars of first name → list of full names)
+        $prefixIndex = [];
+        foreach ($nameDict as $name => $entry) {
+            if ($entry['type'] !== 'full') continue;
+            $prefix = substr($name, 0, 2);
+            if (!isset($prefixIndex[$prefix])) {
+                $prefixIndex[$prefix] = [];
+            }
+            $prefixIndex[$prefix][$name] = $entry;
+        }
+
+        // Build player lookup by ID for fast nickname resolution
+        $playerById = [];
+        foreach ($players as $p) {
+            $playerById[(int)$p['player_id']] = $p;
+        }
+
+        return [
+            'nameDict'       => $nameDict,
+            'nicknameMap'    => $nicknameMap,
+            'players'        => $players,
+            'playerById'     => $playerById,
+            'prefixIndex'    => $prefixIndex,
+            'makers'         => $makers,
+            'makerAliases'   => $makerAliases,
+            'styles'         => $styles,
+            'styleAliases'   => $styleAliases,
+            'specialties'    => $specialties,
+            'teams'          => $teams,
+        ];
+    }
+
+    /**
+     * Extract card records from transcript text using player-anchored approach.
+     */
+    private function extractCardRecords(string $fullText, array $ref, array $segBounds): array
+    {
+        $textLower = mb_strtolower($fullText);
+        $textLen = strlen($fullText);
+
+        // Tokenize into words with positions
+        $words = [];
+        preg_match_all('/[a-zA-Z\'\-]+/', $textLower, $matches, PREG_OFFSET_CAPTURE);
+        foreach ($matches[0] as $m) {
+            $words[] = ['word' => $m[0], 'pos' => $m[1]];
+        }
+
+        $wordCount = count($words);
+        $playerMatches = [];
+
+        // Scan for player name matches (2-word and 3-word windows)
+        for ($i = 0; $i < $wordCount; $i++) {
+            // Try 2-word combo (first last)
+            if ($i + 1 < $wordCount) {
+                $twoWord = $words[$i]['word'] . ' ' . $words[$i + 1]['word'];
+                $match = $this->matchPlayerName($twoWord, $ref, $words[$i]['pos']);
+                if ($match) {
+                    $playerMatches[] = $match;
+                    $i++; // skip next word
+                    continue;
+                }
+            }
+
+            // Try 3-word combo (for names like "Juan De Leon")
+            if ($i + 2 < $wordCount) {
+                $threeWord = $words[$i]['word'] . ' ' . $words[$i + 1]['word'] . ' ' . $words[$i + 2]['word'];
+                $match = $this->matchPlayerName($threeWord, $ref, $words[$i]['pos']);
+                if ($match) {
+                    $playerMatches[] = $match;
+                    $i += 2;
+                    continue;
+                }
+            }
+
+            // Try single word (last name match for 4+ char names)
+            if (strlen($words[$i]['word']) >= 4) {
+                $key = '_last_' . $words[$i]['word'];
+                if (isset($ref['nameDict'][$key])) {
+                    $entry = $ref['nameDict'][$key];
+                    $playerMatches[] = [
+                        'player_id'  => $entry['player_id'],
+                        'team_id'    => $entry['team_id'],
+                        'raw_player' => $entry['display'],
+                        'position'   => $words[$i]['pos'],
+                        'score'      => 0.7,  // last-name-only match
+                    ];
+                }
+                // Check nicknames
+                if (isset($ref['nicknameMap'][$words[$i]['word']])) {
+                    $pid = $ref['nicknameMap'][$words[$i]['word']];
+                    if (isset($ref['playerById'][$pid])) {
+                        $p = $ref['playerById'][$pid];
+                        $playerMatches[] = [
+                            'player_id'  => $pid,
+                            'team_id'    => $p['team_id'] ? (int)$p['team_id'] : null,
+                            'raw_player' => $p['first_name'] . ' ' . $p['last_name'],
+                            'position'   => $words[$i]['pos'],
+                            'score'      => 0.9,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Deduplicate: if same player within 100 chars, keep the one with higher score
+        $deduped = [];
+        foreach ($playerMatches as $match) {
+            $dominated = false;
+            foreach ($deduped as $k => $existing) {
+                if ($existing['player_id'] === $match['player_id']
+                    && abs($existing['position'] - $match['position']) < 100) {
+                    // Keep better one
+                    if ($match['score'] > $existing['score']) {
+                        $deduped[$k] = $match;
+                    }
+                    $dominated = true;
+                    break;
+                }
+            }
+            if (!$dominated) {
+                $deduped[] = $match;
+            }
+        }
+
+        // Sort by position
+        usort($deduped, fn($a, $b) => $a['position'] - $b['position']);
+
+        // For each player match, extract context and build record
+        $records = [];
+        $currentLot = null;
+
+        foreach ($deduped as $match) {
+            $pos = $match['position'];
+
+            // Context window: 200 chars before and after
+            $ctxStart = max(0, $pos - 200);
+            $ctxEnd = min($textLen, $pos + 200);
+            $context = substr($fullText, $ctxStart, $ctxEnd - $ctxStart);
+            $contextLower = mb_strtolower($context);
+
+            // Extract card attributes from context
+            $rec = [
+                'player_id'    => $match['player_id'],
+                'team_id'      => $match['team_id'],
+                'raw_player'   => $match['raw_player'],
+                'raw_team'     => null,
+                'maker_id'     => null,
+                'raw_maker'    => null,
+                'style_id'     => null,
+                'raw_style'    => null,
+                'specialty_id' => null,
+                'raw_specialty'=> null,
+                'raw_parallel' => null,
+                'raw_card_number' => null,
+                'lot_number'   => null,
+                'is_rookie'    => false,
+                'is_autograph' => false,
+                'is_relic'     => false,
+                'is_giveaway'  => false,
+                'confidence'   => 0.30,  // base: player matched
+                'excerpt'      => preg_replace('/[\x80-\xFF]/', '', $context),
+                'text_position'=> $pos,
+            ];
+
+            // --- Maker detection ---
+            foreach ($ref['makers'] as $name => $id) {
+                if (strpos($contextLower, $name) !== false) {
+                    $rec['maker_id'] = $id;
+                    $rec['raw_maker'] = $name;
+                    break;
+                }
+            }
+            if (!$rec['maker_id']) {
+                foreach ($ref['makerAliases'] as $alias => $canonical) {
+                    if (strpos($contextLower, $alias) !== false && isset($ref['makers'][$canonical])) {
+                        $rec['maker_id'] = $ref['makers'][$canonical];
+                        $rec['raw_maker'] = $alias . ' → ' . $canonical;
+                        break;
+                    }
+                }
+            }
+
+            // --- Style detection ---
+            foreach ($ref['styles'] as $name => $id) {
+                if (strpos($contextLower, $name) !== false) {
+                    $rec['style_id'] = $id;
+                    $rec['raw_style'] = $name;
+                    break;
+                }
+            }
+            if (!$rec['style_id']) {
+                foreach ($ref['styleAliases'] as $alias => $canonical) {
+                    if (strpos($contextLower, $alias) !== false && isset($ref['styles'][$canonical])) {
+                        $rec['style_id'] = $ref['styles'][$canonical];
+                        $rec['raw_style'] = $alias . ' → ' . $canonical;
+                        break;
+                    }
+                }
+            }
+
+            // --- Specialty detection ---
+            foreach ($ref['specialties'] as $name => $id) {
+                if (strpos($contextLower, $name) !== false) {
+                    $rec['specialty_id'] = $id;
+                    $rec['raw_specialty'] = $name;
+                    break;
+                }
+            }
+
+            // --- Attribute flags ---
+            if (preg_match('/\brookie\b/', $contextLower)) {
+                $rec['is_rookie'] = true;
+            }
+            if (preg_match('/\b(autograph|auto(?:graph)?|signed)\b/', $contextLower)) {
+                $rec['is_autograph'] = true;
+            }
+            if (preg_match('/\b(relic|game[\s-]?used|patch|jersey|memorabilia)\b/', $contextLower)) {
+                $rec['is_relic'] = true;
+            }
+            if (preg_match('/\b(give\s*away|giveaway)\b/', $contextLower)) {
+                $rec['is_giveaway'] = true;
+            }
+
+            // --- Parallel/color detection ---
+            $colors = ['blue', 'gold', 'red', 'green', 'black', 'pink', 'purple', 'orange',
+                       'silver', 'white', 'yellow', 'aqua', 'teal', 'platinum', 'sapphire'];
+            foreach ($colors as $color) {
+                if (preg_match('/\b' . $color . '\b/', $contextLower)) {
+                    $rec['raw_parallel'] = $color;
+                    break;
+                }
+            }
+
+            // --- Card numbering ---
+            if (preg_match('/(?:number(?:ed)?|#)\s*(?:to\s+)?(\d{1,4})\s*(?:\/\s*(\d{1,4}))?/', $contextLower, $numMatch)) {
+                $rec['raw_card_number'] = $numMatch[0];
+            } elseif (preg_match('/(?:to|of)\s+(\d{1,4})\b/', $contextLower, $numMatch)) {
+                // "to 199", "to 25"
+                $num = (int) $numMatch[1];
+                if ($num > 0 && $num <= 9999 && !in_array($num, [1, 2, 3, 4, 5])) {
+                    $rec['raw_card_number'] = '/' . $num;
+                }
+            } elseif (preg_match('/\/\s*(\d{1,4})\b/', $contextLower, $numMatch)) {
+                $rec['raw_card_number'] = $numMatch[0];
+            }
+
+            // --- Lot number ---
+            if (preg_match('/\b(?:lot)\s*(?:#|number)?\s*(\d{1,5})\b/', $contextLower, $lotMatch)) {
+                $currentLot = (int) $lotMatch[1];
+            }
+            // Check for standalone number patterns that look like lot announcements
+            // e.g., "one seventy", "171", "lot 172"
+            if (preg_match('/\b(\d{2,5})\b/', $contextLower, $numOnly)) {
+                $n = (int) $numOnly[1];
+                // Only treat as lot number if it's in a plausible range
+                if ($n >= 100 && $n <= 99999 && $currentLot !== null && abs($n - $currentLot) <= 5) {
+                    $currentLot = $n;
+                }
+            }
+
+            $rec['lot_number'] = $currentLot;
+
+            // --- Confidence scoring ---
+            $conf = 0.30;  // base: player matched
+            $conf += $match['score'] * 0.1; // quality of player match
+            if ($rec['maker_id'] || $rec['style_id']) { $conf += 0.20; }
+            if ($rec['specialty_id'] || $rec['raw_parallel']) { $conf += 0.10; }
+            if ($rec['lot_number']) { $conf += 0.10; }
+            if ($rec['raw_card_number']) { $conf += 0.10; }
+            if ($rec['is_rookie'] || $rec['is_autograph'] || $rec['is_relic']) { $conf += 0.05; }
+            $rec['confidence'] = min(1.00, round($conf, 2));
+
+            $records[] = $rec;
+        }
+
+        return $records;
+    }
+
+    /**
+     * Try to match a text fragment against the player name dictionary.
+     * Returns match info or null.
+     */
+    private function matchPlayerName(string $text, array $ref, int $position): ?array
+    {
+        $textLower = mb_strtolower(trim($text));
+
+        // Exact match
+        if (isset($ref['nameDict'][$textLower])) {
+            $entry = $ref['nameDict'][$textLower];
+            if ($entry['type'] === 'full') {
+                return [
+                    'player_id'  => $entry['player_id'],
+                    'team_id'    => $entry['team_id'],
+                    'raw_player' => $entry['display'],
+                    'position'   => $position,
+                    'score'      => 1.0,
+                ];
+            }
+        }
+
+        // Nickname exact match
+        if (isset($ref['nicknameMap'][$textLower])) {
+            $pid = $ref['nicknameMap'][$textLower];
+            if (isset($ref['playerById'][$pid])) {
+                $p = $ref['playerById'][$pid];
+                return [
+                    'player_id'  => $pid,
+                    'team_id'    => $p['team_id'] ? (int)$p['team_id'] : null,
+                    'raw_player' => $p['first_name'] . ' ' . $p['last_name'],
+                    'position'   => $position,
+                    'score'      => 0.9,
+                ];
+            }
+        }
+
+        // Fuzzy matching disabled for now (too slow with 4500+ players).
+        // Exact + last-name + nickname matching covers most cases.
+        // TODO: Add targeted fuzzy pass on unmatched regions in v2.
+
+        return null;
     }
 
     // ─── Private Helpers ──────────────────────────────────────────

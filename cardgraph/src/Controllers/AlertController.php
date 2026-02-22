@@ -245,25 +245,34 @@ class AlertController
         $userId = Auth::getUserId();
         $pdo = cg_db();
 
+        $isEnabled    = (int) ($body['is_enabled'] ?? 0);
+        $showScorecard = (int) ($body['show_scorecard'] ?? 1);
+        $showAnalytics = (int) ($body['show_analytics'] ?? 1);
+        $showPlayers  = (int) ($body['show_players'] ?? 0);
+        $showTeams    = (int) ($body['show_teams'] ?? 0);
+        $scrollSpeed  = $body['scroll_speed'] ?? 'medium';
+
         $stmt = $pdo->prepare(
-            "UPDATE CG_ScrollSettings SET
-                is_enabled = :is_enabled,
-                show_scorecard = :show_scorecard,
-                show_analytics = :show_analytics,
-                show_players = :show_players,
-                show_teams = :show_teams,
-                scroll_speed = :scroll_speed,
-                updated_by = :updated_by
-             WHERE setting_id = 1"
+            "INSERT INTO CG_ScrollSettings
+                (setting_id, is_enabled, show_scorecard, show_analytics, show_players, show_teams, scroll_speed, updated_by)
+             VALUES (1, :is_enabled, :show_scorecard, :show_analytics, :show_players, :show_teams, :scroll_speed, :updated_by)
+             ON DUPLICATE KEY UPDATE
+                is_enabled = VALUES(is_enabled),
+                show_scorecard = VALUES(show_scorecard),
+                show_analytics = VALUES(show_analytics),
+                show_players = VALUES(show_players),
+                show_teams = VALUES(show_teams),
+                scroll_speed = VALUES(scroll_speed),
+                updated_by = VALUES(updated_by)"
         );
 
         $stmt->execute([
-            ':is_enabled'     => (int) ($body['is_enabled'] ?? 0),
-            ':show_scorecard' => (int) ($body['show_scorecard'] ?? 1),
-            ':show_analytics' => (int) ($body['show_analytics'] ?? 1),
-            ':show_players'   => (int) ($body['show_players'] ?? 0),
-            ':show_teams'     => (int) ($body['show_teams'] ?? 0),
-            ':scroll_speed'   => $body['scroll_speed'] ?? 'medium',
+            ':is_enabled'     => $isEnabled,
+            ':show_scorecard' => $showScorecard,
+            ':show_analytics' => $showAnalytics,
+            ':show_players'   => $showPlayers,
+            ':show_teams'     => $showTeams,
+            ':scroll_speed'   => $scrollSpeed,
             ':updated_by'     => $userId,
         ]);
 
@@ -295,11 +304,11 @@ class AlertController
         }
 
         if ($settings['show_players']) {
-            $items[] = ['type' => 'players', 'label' => 'Player Stats', 'value' => 'Coming soon', 'available' => false];
+            $items = array_merge($items, $this->getScrollPlayersData($pdo));
         }
 
         if ($settings['show_teams']) {
-            $items[] = ['type' => 'teams', 'label' => 'Teams Status', 'value' => 'Coming soon', 'available' => false];
+            $items = array_merge($items, $this->getScrollTeamsData($pdo));
         }
 
         jsonResponse([
@@ -489,7 +498,7 @@ class AlertController
         $costStmt = $pdo->prepare(
             "SELECT COALESCE(SUM(c.cost_amount), 0) AS item_costs
              FROM CG_ItemCosts c
-             JOIN CG_AuctionLineItems a ON a.line_item_id = c.line_item_id
+             JOIN CG_AuctionLineItems a ON a.ledger_transaction_id = c.ledger_transaction_id
              WHERE a.order_placed_at BETWEEN :start AND :end"
         );
         $costStmt->execute([':start' => $monthStart, ':end' => $monthEnd]);
@@ -544,6 +553,167 @@ class AlertController
             ];
         }
 
+        return $items;
+    }
+
+    /**
+     * Team game scores for the scroll ticker — pulls from MLB schedule cache.
+     */
+    private function getScrollTeamsData(PDO $pdo): array
+    {
+        // Read cached schedule from MlbController's cache directory
+        $cacheDir = __DIR__ . '/../../storage/cache/';
+        $today    = date('Y-m-d');
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+        $tomorrow  = date('Y-m-d', strtotime('+1 day'));
+        $cacheKey  = "mlb_schedule_{$yesterday}_{$tomorrow}";
+        $cacheFile = $cacheDir . $cacheKey . '.json';
+
+        $apiData = null;
+        if (file_exists($cacheFile)) {
+            $apiData = json_decode(file_get_contents($cacheFile), true);
+        }
+
+        if (!$apiData) {
+            // No cached schedule available — fall back to W-L records
+            return $this->getScrollTeamsFallback($pdo);
+        }
+
+        // Build team map for abbreviations + mlb_id
+        $stmt = $pdo->query("SELECT mlb_id, abbreviation FROM CG_Teams WHERE mlb_id IS NOT NULL");
+        $teamMap = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $teamMap[(int)$row['mlb_id']] = $row['abbreviation'];
+        }
+
+        $items = [];
+        foreach ($apiData['dates'] ?? [] as $dateObj) {
+            $date = $dateObj['date'] ?? '';
+            foreach ($dateObj['games'] ?? [] as $g) {
+                $status   = $g['status']['abstractGameState'] ?? 'Scheduled';
+                $detailed = $g['status']['detailedState'] ?? $status;
+
+                // Skip games that haven't started yet (unless today)
+                if ($status === 'Preview' && $date !== $today) continue;
+
+                $awayId    = (int)($g['teams']['away']['team']['id'] ?? 0);
+                $homeId    = (int)($g['teams']['home']['team']['id'] ?? 0);
+                $awayAbbr  = $teamMap[$awayId] ?? ($g['teams']['away']['team']['abbreviation'] ?? '?');
+                $homeAbbr  = $teamMap[$homeId] ?? ($g['teams']['home']['team']['abbreviation'] ?? '?');
+                $awayScore = $g['teams']['away']['score'] ?? null;
+                $homeScore = $g['teams']['home']['score'] ?? null;
+
+                // Status text
+                if ($status === 'Final') {
+                    $statusText = 'F';
+                } elseif ($status === 'Live') {
+                    $inn = $g['linescore']['currentInningOrdinal'] ?? '';
+                    $half = $g['linescore']['inningState'] ?? '';
+                    $halfAbbr = ($half === 'Top') ? 'Top' : (($half === 'Bottom') ? 'Bot' : $half);
+                    $statusText = $halfAbbr . ' ' . $inn;
+                } else {
+                    // Scheduled — show start time in CT
+                    $gameDate = $g['gameDate'] ?? '';
+                    $statusText = '';
+                    if ($gameDate) {
+                        try {
+                            $dt = new DateTime($gameDate, new DateTimeZone('UTC'));
+                            $dt->setTimezone(new DateTimeZone('America/Chicago'));
+                            $statusText = $dt->format('g:i');
+                        } catch (\Throwable $e) { /* skip */ }
+                    }
+                }
+
+                $items[] = [
+                    'type'   => 'game',
+                    'away'   => ['abbr' => $awayAbbr, 'score' => $awayScore, 'logoUrl' => $awayId ? "/img/teams/{$awayId}.png" : null],
+                    'home'   => ['abbr' => $homeAbbr, 'score' => $homeScore, 'logoUrl' => $homeId ? "/img/teams/{$homeId}.png" : null],
+                    'status' => $statusText,
+                    'isLive' => $status === 'Live',
+                ];
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Fallback: W-L records when no schedule cache exists.
+     */
+    private function getScrollTeamsFallback(PDO $pdo): array
+    {
+        $stmt = $pdo->query(
+            "SELECT t.abbreviation, t.mlb_id, ts.current_season_stats
+             FROM CG_Teams t
+             JOIN CG_TeamStatistics ts ON ts.team_id = t.team_id
+             WHERE t.is_active = 1 AND t.mlb_id IS NOT NULL
+               AND ts.current_season_stats IS NOT NULL
+             ORDER BY t.league, t.division, t.team_name"
+        );
+
+        $items = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $stats = json_decode($row['current_season_stats'], true);
+            if (!$stats || !isset($stats['wins'])) continue;
+
+            $w = (int) $stats['wins'];
+            $l = (int) $stats['losses'];
+            $streak = $stats['streak'] ?? '-';
+            $mlbId = (int) $row['mlb_id'];
+            $items[] = [
+                'type'    => 'teams',
+                'label'   => $row['abbreviation'],
+                'value'   => "{$w}-{$l} · {$streak}",
+                'logoUrl' => $mlbId ? "/img/teams/{$mlbId}.png" : null,
+            ];
+        }
+        return $items;
+    }
+
+    /**
+     * Top player stats for the scroll ticker.
+     */
+    private function getScrollPlayersData(PDO $pdo): array
+    {
+        $stmt = $pdo->query(
+            "SELECT p.first_name, p.last_name, p.primary_position, p.current_season_stats
+             FROM CG_Players p
+             WHERE p.popularity_score IS NOT NULL
+               AND p.current_season_stats IS NOT NULL
+               AND p.is_active = 1
+             ORDER BY p.popularity_score ASC
+             LIMIT 15"
+        );
+
+        $items = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $stats = json_decode($row['current_season_stats'], true);
+            if (!$stats) continue;
+
+            $name = $row['first_name'] . ' ' . $row['last_name'];
+            $pos = $row['primary_position'] ?? '';
+
+            // Pitchers: W-L | ERA | K
+            if (in_array($pos, ['P', 'SP', 'RP', 'CL'])) {
+                $w = $stats['wins'] ?? 0;
+                $l = $stats['losses'] ?? 0;
+                $era = $stats['era'] ?? '-';
+                $k = $stats['strikeouts'] ?? 0;
+                $value = "{$w}-{$l} | {$era} ERA | {$k} K";
+            } else {
+                // Hitters: AVG | HR | RBI
+                $avg = $stats['batting_average'] ?? '-';
+                $hr = $stats['home_runs'] ?? 0;
+                $rbi = $stats['rbi'] ?? 0;
+                $value = "{$avg} | {$hr} HR | {$rbi} RBI";
+            }
+
+            $items[] = [
+                'type'  => 'players',
+                'label' => $name,
+                'value' => $value,
+            ];
+        }
         return $items;
     }
 }

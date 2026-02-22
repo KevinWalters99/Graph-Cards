@@ -89,17 +89,35 @@ var Alerts = {
             }
 
             // Set speed
-            var speeds = { slow: '45s', medium: '30s', fast: '18s' };
+            var speeds = { slow: '90s', medium: '60s', fast: '45s' };
             var duration = speeds[result.speed] || '30s';
 
             // Build ticker items — duplicate for seamless loop
             var itemsHtml = '';
             for (var i = 0; i < result.items.length; i++) {
                 var item = result.items[i];
-                itemsHtml += '<span class="ticker-item">' +
-                    '<span class="ticker-label">' + Alerts.escHtml(item.label) + ':</span>' +
-                    '<span class="ticker-value">' + Alerts.escHtml(item.value) + '</span>' +
-                    '</span>';
+                if (item.type === 'game') {
+                    // Game score format: [logo] ABR score - [logo] ABR score (status)
+                    itemsHtml += '<span class="ticker-item ticker-game' + (item.isLive ? ' ticker-live' : '') + '">';
+                    itemsHtml += Alerts.tickerTeamChip(item.away);
+                    if (item.away.score !== null && item.away.score !== undefined) {
+                        itemsHtml += '<span class="ticker-vs">-</span>';
+                    } else {
+                        itemsHtml += '<span class="ticker-vs">vs</span>';
+                    }
+                    itemsHtml += Alerts.tickerTeamChip(item.home);
+                    if (item.status) {
+                        itemsHtml += '<span class="ticker-game-status">' + Alerts.escHtml(item.status) + '</span>';
+                    }
+                    itemsHtml += '</span>';
+                } else {
+                    // Standard label: value format
+                    var logoHtml = item.logoUrl ? '<img class="ticker-logo" src="' + item.logoUrl + '" alt="">' : '';
+                    itemsHtml += '<span class="ticker-item">' + logoHtml +
+                        '<span class="ticker-label">' + Alerts.escHtml(item.label) + ':</span>' +
+                        '<span class="ticker-value">' + Alerts.escHtml(item.value) + '</span>' +
+                        '</span>';
+                }
                 if (i < result.items.length - 1) {
                     itemsHtml += '<span class="ticker-sep">|</span>';
                 }
@@ -120,6 +138,19 @@ var Alerts = {
         });
     },
 
+    tickerTeamChip: function(team) {
+        var h = '<span class="ticker-team">';
+        if (team.logoUrl) {
+            h += '<img class="ticker-logo" src="' + team.logoUrl + '" alt="">';
+        }
+        h += '<span class="ticker-abbr">' + Alerts.escHtml(team.abbr) + '</span>';
+        if (team.score !== null && team.score !== undefined) {
+            h += '<span class="ticker-score">' + team.score + '</span>';
+        }
+        h += '</span>';
+        return h;
+    },
+
     escHtml: function(str) {
         if (!str) return '';
         var div = document.createElement('div');
@@ -137,7 +168,6 @@ var AlertsAdmin = {
             this.initialized = true;
         }
         this.loadAlerts();
-        this.loadScrollSettings();
     },
 
     loadAlerts: function() {
@@ -161,6 +191,7 @@ var AlertsAdmin = {
             });
 
             self.renderTable(data);
+            self.loadScrollSettings();
         }).catch(function(err) {
             var container = document.getElementById('maint-panel-alerts');
             if (container) {
@@ -500,19 +531,17 @@ var AlertsAdmin = {
         p.push('<div class="setting-row">');
         p.push('<span class="setting-label">Player Stats</span>');
         p.push('<label class="toggle-switch">');
-        p.push('<input type="checkbox" id="scroll-players" disabled>');
+        p.push('<input type="checkbox" id="scroll-players"' + (settings.show_players == 1 ? ' checked' : '') + '>');
         p.push('<span class="toggle-slider"></span>');
         p.push('</label>');
-        p.push('<span class="setting-hint">Available with Parser project</span>');
         p.push('</div>');
 
         p.push('<div class="setting-row">');
         p.push('<span class="setting-label">Teams Status</span>');
         p.push('<label class="toggle-switch">');
-        p.push('<input type="checkbox" id="scroll-teams" disabled>');
+        p.push('<input type="checkbox" id="scroll-teams"' + (settings.show_teams == 1 ? ' checked' : '') + '>');
         p.push('<span class="toggle-slider"></span>');
         p.push('</label>');
-        p.push('<span class="setting-hint">Available with Parser project</span>');
         p.push('</div>');
 
         // Speed
@@ -538,8 +567,8 @@ var AlertsAdmin = {
                 is_enabled: document.getElementById('scroll-enabled').checked ? 1 : 0,
                 show_scorecard: document.getElementById('scroll-scorecard').checked ? 1 : 0,
                 show_analytics: document.getElementById('scroll-analytics').checked ? 1 : 0,
-                show_players: 0,
-                show_teams: 0,
+                show_players: document.getElementById('scroll-players').checked ? 1 : 0,
+                show_teams: document.getElementById('scroll-teams').checked ? 1 : 0,
                 scroll_speed: document.getElementById('scroll-speed').value
             };
             API.put('/api/alerts/scroll', data).then(function() {

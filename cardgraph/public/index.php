@@ -111,14 +111,14 @@ $router->post('/api/uploads/paypal',            ['UploadController', 'paypal']);
 // === Alerts & Notifications ===
 $router->get('/api/alerts',                  ['AlertController', 'listAlerts']);
 $router->post('/api/alerts',                 ['AlertController', 'createAlert']);
-$router->put('/api/alerts/{id}',             ['AlertController', 'updateAlert']);
-$router->delete('/api/alerts/{id}',          ['AlertController', 'deleteAlert']);
-$router->put('/api/alerts/{id}/toggle',      ['AlertController', 'toggleAlert']);
 $router->get('/api/alerts/active',           ['AlertController', 'getActiveAlerts']);
-$router->post('/api/alerts/{id}/dismiss',    ['AlertController', 'dismissAlert']);
 $router->get('/api/alerts/scroll',           ['AlertController', 'getScrollSettings']);
 $router->put('/api/alerts/scroll',           ['AlertController', 'updateScrollSettings']);
 $router->get('/api/alerts/scroll/data',      ['AlertController', 'getScrollData']);
+$router->put('/api/alerts/{id}',             ['AlertController', 'updateAlert']);
+$router->delete('/api/alerts/{id}',          ['AlertController', 'deleteAlert']);
+$router->put('/api/alerts/{id}/toggle',      ['AlertController', 'toggleAlert']);
+$router->post('/api/alerts/{id}/dismiss',    ['AlertController', 'dismissAlert']);
 
 // === Transcription ===
 $router->get('/api/transcription/settings',             ['TranscriptionController', 'getSettings']);
@@ -138,6 +138,62 @@ $router->post('/api/transcription/scheduler-tick',      ['TranscriptionControlle
 $router->post('/api/transcription/cleanup',              ['TranscriptionController', 'cleanupExpired'], false);
 $router->post('/api/transcription/docker-build',        ['TranscriptionController', 'dockerBuild'], false);
 $router->get('/api/transcription/docker-build-status',  ['TranscriptionController', 'dockerBuildStatus'], false);
+
+// === Table Transcriptions (parse transcript text → card records) ===
+$router->post('/api/transcription/sessions/{id}/parse',           ['TranscriptionController', 'parseSession']);
+$router->get('/api/transcription/sessions/{id}/records',          ['TranscriptionController', 'listRecords']);
+$router->put('/api/transcription/records/{id}',                   ['TranscriptionController', 'updateRecord']);
+$router->delete('/api/transcription/records/{id}',                ['TranscriptionController', 'deleteRecord']);
+$router->get('/api/transcription/sessions/{id}/transcript-text',  ['TranscriptionController', 'getTranscriptText']);
+$router->get('/api/transcription/sessions/{id}/parse-runs',       ['TranscriptionController', 'listParseRuns']);
+$router->post('/api/transcription/sessions/{id}/transcribe',     ['TranscriptionController', 'transcribeSession']);
+
+// === Parser Support Tables (admin) ===
+$router->get('/api/parser/players',                     ['ParserController', 'listPlayers']);
+$router->post('/api/parser/players',                    ['ParserController', 'createPlayer']);
+$router->put('/api/parser/players/{id}',                ['ParserController', 'updatePlayer']);
+$router->delete('/api/parser/players/{id}',             ['ParserController', 'deletePlayer']);
+$router->post('/api/parser/players/{id}/nicknames',     ['ParserController', 'addNickname']);
+$router->put('/api/parser/nicknames/{id}',              ['ParserController', 'updateNickname']);
+$router->delete('/api/parser/nicknames/{id}',           ['ParserController', 'deleteNickname']);
+
+$router->get('/api/parser/teams',                       ['ParserController', 'listTeams']);
+$router->post('/api/parser/teams',                      ['ParserController', 'createTeam']);
+$router->put('/api/parser/teams/{id}',                  ['ParserController', 'updateTeam']);
+$router->delete('/api/parser/teams/{id}',               ['ParserController', 'deleteTeam']);
+$router->post('/api/parser/teams/{id}/aliases',         ['ParserController', 'addAlias']);
+$router->put('/api/parser/aliases/{id}',                ['ParserController', 'updateAlias']);
+$router->delete('/api/parser/aliases/{id}',             ['ParserController', 'deleteAlias']);
+
+$router->get('/api/parser/makers',                      ['ParserController', 'listMakers']);
+$router->post('/api/parser/makers',                     ['ParserController', 'createMaker']);
+$router->put('/api/parser/makers/{id}',                 ['ParserController', 'updateMaker']);
+$router->delete('/api/parser/makers/{id}',              ['ParserController', 'deleteMaker']);
+
+$router->get('/api/parser/styles',                      ['ParserController', 'listStyles']);
+$router->post('/api/parser/styles',                     ['ParserController', 'createStyle']);
+$router->put('/api/parser/styles/{id}',                 ['ParserController', 'updateStyle']);
+$router->delete('/api/parser/styles/{id}',              ['ParserController', 'deleteStyle']);
+
+$router->get('/api/parser/specialties',                 ['ParserController', 'listSpecialties']);
+$router->post('/api/parser/specialties',                ['ParserController', 'createSpecialty']);
+$router->put('/api/parser/specialties/{id}',            ['ParserController', 'updateSpecialty']);
+$router->delete('/api/parser/specialties/{id}',         ['ParserController', 'deleteSpecialty']);
+
+// === Parser Stats Refresh ===
+$router->get('/api/parser/refresh/status',              ['ParserController', 'getRefreshStatus']);
+$router->post('/api/parser/refresh/standings',          ['ParserController', 'refreshTeamStandings']);
+$router->post('/api/parser/refresh/rosters',            ['ParserController', 'refreshTeamRosters']);
+$router->post('/api/parser/refresh/milb-rosters',       ['ParserController', 'refreshMinorLeagueRosters']);
+$router->post('/api/parser/refresh/historical',         ['ParserController', 'refreshHistoricalPlayers']);
+$router->post('/api/parser/refresh/backfill-draft',    ['ParserController', 'backfillDraftInfo']);
+$router->post('/api/parser/refresh/popularity',        ['ParserController', 'importPopularityRankings']);
+$router->post('/api/parser/refresh/backfill-status',   ['ParserController', 'backfillDraftStatus']);
+
+// === MLB ===
+$router->get('/api/mlb/schedule',       ['MlbController', 'getSchedule']);
+$router->get('/api/mlb/game/{id}',      ['MlbController', 'getGameDetail']);
+$router->get('/api/mlb/standings',      ['MlbController', 'getStandings']);
 
 // === Maintenance ===
 $router->get('/api/maintenance/upload-log', ['MaintenanceController', 'uploadLog']);

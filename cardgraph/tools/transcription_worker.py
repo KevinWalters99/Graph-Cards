@@ -49,17 +49,21 @@ def handle_sigterm(signum, frame):
     running = False
 
 
+WHISPER_CACHE = '/volume1/web/cardgraph/tools/whisper_models'
+
+
 def load_whisper_model(model_name):
     """Load the Whisper model once at startup."""
     global whisper_model
+    os.makedirs(WHISPER_CACHE, exist_ok=True)
     try:
         import whisper
-        print(f"Loading Whisper model: {model_name}")
-        whisper_model = whisper.load_model(model_name)
+        print(f"Loading Whisper model: {model_name} (cache: {WHISPER_CACHE})")
+        whisper_model = whisper.load_model(model_name, download_root=WHISPER_CACHE)
         print(f"Whisper model loaded successfully")
         return True
     except ImportError:
-        print("ERROR: whisper module not installed. pip install openai-whisper")
+        print("ERROR: whisper module not installed")
         return False
     except Exception as e:
         print(f"ERROR loading Whisper model: {e}")
@@ -88,7 +92,7 @@ def main():
     parser = argparse.ArgumentParser(description='Transcription Worker')
     parser.add_argument('--session-id', type=int, required=True)
     parser.add_argument('--session-dir', type=str, required=True)
-    parser.add_argument('--model', type=str, default='base', choices=['tiny', 'base'])
+    parser.add_argument('--model', type=str, default='base', choices=['tiny', 'base', 'small', 'medium', 'large'])
     args = parser.parse_args()
 
     signal.signal(signal.SIGTERM, handle_sigterm)
@@ -98,11 +102,26 @@ def main():
     audio_dir = os.path.join(session_dir, 'audio')
     tx_dir = os.path.join(session_dir, 'transcripts')
 
+    # Ensure transcripts directory exists and is writable
+    os.makedirs(tx_dir, exist_ok=True)
+    if not os.access(tx_dir, os.W_OK):
+        # Docker may have created the dir as root; try to fix via chmod
+        try:
+            os.chmod(tx_dir, 0o777)
+        except OSError:
+            pass
+    if not os.access(tx_dir, os.W_OK):
+        # Fallback: use a writable location under tools/
+        tx_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'transcripts_fallback', f'session_{session_id}')
+        os.makedirs(tx_dir, exist_ok=True)
+        print(f"[WARNING] Original transcripts dir not writable, using fallback: {tx_dir}")
+
     db = get_db()
 
-    # Load Whisper model
+    # Load Whisper model (first run downloads ~140MB for 'base')
     if not load_whisper_model(args.model):
-        log_event(db, session_id, 'error', 'whisper_load_error', 'Failed to load Whisper model')
+        log_event(db, session_id, 'warning', 'whisper_load_error',
+                  f'Whisper model "{args.model}" failed to load — transcription skipped')
         db.close()
         return
 
@@ -177,8 +196,8 @@ def main():
             # Mark as transcribing
             with db.cursor() as cur:
                 cur.execute(
-                    "UPDATE CG_TranscriptionSegments SET transcription_status = 'transcribing', "
-                    "transcription_progress = 10 WHERE segment_id = %s",
+                    "UPDATE CG_TranscriptionSegments SET transcription_status = 'transcribing' "
+                    "WHERE segment_id = %s",
                     (seg_id,)
                 )
 
@@ -190,13 +209,6 @@ def main():
             tx_path = os.path.join(tx_dir, tx_filename)
 
             try:
-                # Update progress mid-transcription
-                with db.cursor() as cur:
-                    cur.execute(
-                        "UPDATE CG_TranscriptionSegments SET transcription_progress = 50 "
-                        "WHERE segment_id = %s", (seg_id,)
-                    )
-
                 text = transcribe_segment(audio_path, tx_path)
 
                 # Mark complete

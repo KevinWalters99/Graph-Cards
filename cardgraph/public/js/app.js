@@ -55,6 +55,11 @@ const App = {
             panel.classList.toggle('active', panel.id === `tab-${tabName}`);
         });
 
+        // Stop MLB live polling when leaving the tab
+        if (typeof Mlb !== 'undefined' && Mlb.liveTimer) {
+            Mlb.stopLivePolling();
+        }
+
         // Initialize tab content
         switch (tabName) {
             case 'dashboard':
@@ -81,9 +86,24 @@ const App = {
             case 'analytics':
                 Analytics.init();
                 break;
+            case 'mlb':
+                Mlb.init();
+                break;
             case 'maintenance':
                 Maintenance.init();
                 break;
+        }
+
+        // Move scroll ticker into the active tab's page-header (right of the title)
+        const ticker = document.getElementById('scroll-ticker');
+        const header = document.querySelector(`#tab-${tabName} .page-header`);
+        if (header && ticker) {
+            const h1 = header.querySelector('h1');
+            if (h1 && h1.nextElementSibling) {
+                header.insertBefore(ticker, h1.nextElementSibling);
+            } else {
+                header.appendChild(ticker);
+            }
         }
     },
 

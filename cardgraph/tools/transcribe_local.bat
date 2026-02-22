@@ -1,24 +1,9 @@
 @echo off
-title Card Graph - PC Worker Service
-echo ============================================================
-echo   Card Graph - PC Worker Service
-echo ============================================================
+echo Card Graph — PC Worker (Local Whisper Transcription)
 echo.
-
-set PYTHON=%LOCALAPPDATA%\Programs\Python\Python312\python.exe
-set SCRIPT=%~dp0pc_worker_service.py
-
-if not exist "%PYTHON%" (
-    echo ERROR: Python not found at %PYTHON%
-    echo Install Python 3.12 or update the path in this script.
-    pause
-    exit /b 1
-)
-
-echo Starting local worker service...
-echo The web UI will auto-detect this service.
-echo Press Ctrl+C to stop.
+echo Starting local server on http://localhost:8891
+echo Use the web app's PC Worker controls to start/stop transcription.
 echo.
-
-"%PYTHON%" "%SCRIPT%" %*
+pip install openai-whisper flask flask-cors pymysql >nul 2>&1
+python "%~dp0pc_worker.py"
 pause

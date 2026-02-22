@@ -50,9 +50,29 @@ for REQ_FILE in "$TOOLS_DIR"/start_session_*.request; do
     echo "Session $SID: started (PID $!)" >> "$LOG"
 done
 
+# --- Fix archive directory permissions (Docker creates as root, http user needs write) ---
+ARCHIVE_DIR="/volume1/web/cardgraph/archive"
+if [ -d "$ARCHIVE_DIR" ]; then
+    find "$ARCHIVE_DIR" -type d ! -perm -o+w -exec chmod o+w {} + 2>/dev/null
+fi
+
 # --- Retention cleanup (self-throttled to once/hour inside the endpoint) ---
 curl -s -d 'key=cg_sched_2026' http://192.168.0.215:8880/api/transcription/cleanup >> "$LOG" 2>&1
 echo "" >> "$LOG"
+
+# --- Whisper install (if requested) ---
+WHISPER_REQ="$TOOLS_DIR/whisper_install_request"
+WHISPER_LOCK="$TOOLS_DIR/whisper_install.lock"
+WHISPER_SCRIPT="$TOOLS_DIR/install_whisper.sh"
+
+if [ -f "$WHISPER_REQ" ] && [ ! -f "$WHISPER_LOCK" ]; then
+    rm -f "$WHISPER_REQ"
+    echo "Whisper install starting at $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG"
+    touch "$WHISPER_LOCK"
+    bash "$WHISPER_SCRIPT"
+    rm -f "$WHISPER_LOCK"
+    echo "Whisper install finished" >> "$LOG"
+fi
 
 # --- Docker build (if requested) ---
 BUILD_REQ="$TOOLS_DIR/docker_build_request"
