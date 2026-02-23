@@ -1452,9 +1452,23 @@ body {
     font-size: 11px;
     margin-left: 2px;
 }
+.ticker-live {
+    background: rgba(76,175,80,0.12);
+    border-radius: 4px;
+    padding: 2px 12px;
+    margin: -2px 0;
+    box-shadow: 0 0 6px rgba(76,175,80,0.35);
+}
 .ticker-live .ticker-game-status {
     color: #4caf50;
     font-weight: 600;
+}
+.ticker-score-changed .ticker-score {
+    animation: ticker-blink 0.6s ease-in-out 4;
+}
+@keyframes ticker-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
 }
 
 @keyframes ticker-scroll {
@@ -2504,32 +2518,23 @@ td.mlb-st-num {
 
 /* Current Matchup */
 .mlb-box-matchup {
+    display: flex;
+    gap: 16px;
     background: #f8faf8;
     border: 1px solid #c8e6c9;
     border-radius: 8px;
-    padding: 10px 16px;
+    padding: 8px 16px;
     margin-bottom: 16px;
-}
-.mlb-box-matchup-title {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #2e7d32;
-    margin-bottom: 6px;
 }
 .mlb-box-matchup-final {
     background: #f5f5f5;
     border-color: #ddd;
 }
-.mlb-box-matchup-final .mlb-box-matchup-title {
-    color: #666;
-}
-.mlb-box-matchup-line {
+.mlb-box-matchup-side {
     display: flex;
     align-items: baseline;
     gap: 4px;
-    padding: 2px 0;
+    flex: 1;
     flex-wrap: wrap;
 }
 .mlb-box-player-label {
@@ -2826,6 +2831,13 @@ td.mlb-st-num {
     min-width: 120px;
     flex-shrink: 0;
 }
+.mlb-profile-info-row a {
+    color: #1565c0;
+    text-decoration: none;
+}
+.mlb-profile-info-row a:hover {
+    text-decoration: underline;
+}
 .mlb-profile-description {
     font-size: 14px;
     line-height: 1.7;
@@ -2916,6 +2928,474 @@ td.mlb-st-num {
 .mlb-affiliate-detail {
     font-size: 12px;
     color: #888;
+}
+
+/* ── Decisions (W/L/S) on game cards ── */
+.mlb-decisions {
+    font-size: 11px;
+    color: #666;
+    padding: 4px 0 2px;
+    border-top: 1px solid #eee;
+    margin-top: 4px;
+}
+.mlb-decision-w { color: #2e7d32; font-weight: 600; }
+.mlb-decision-l { color: #c62828; font-weight: 600; }
+.mlb-decision-sv { color: #1565c0; font-weight: 600; }
+
+/* Decisions in box score modal */
+.mlb-box-decisions {
+    display: flex;
+    gap: 16px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+.mlb-box-decisions .mlb-decision-w,
+.mlb-box-decisions .mlb-decision-l,
+.mlb-box-decisions .mlb-decision-sv {
+    font-size: 13px;
+}
+
+/* ── Probable pitchers on game cards ── */
+.mlb-probables {
+    font-size: 11px;
+    color: #555;
+    font-style: italic;
+    padding: 4px 0 2px;
+    border-top: 1px solid #eee;
+    margin-top: 4px;
+}
+
+/* ── Home Run highlights in box score ── */
+.mlb-hr-highlight {
+    background: #fff8e1;
+}
+.mlb-hr-badge {
+    display: inline-block;
+    background: #ff8f00;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 8px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.mlb-hr-summary {
+    font-size: 12px;
+    color: #e65100;
+    font-weight: 600;
+    padding: 6px 8px;
+    margin-top: 4px;
+    background: #fff8e1;
+    border-radius: 4px;
+}
+
+/* ── Wild Card Standings ── */
+.mlb-wildcard-section {
+    margin-top: 8px;
+}
+.mlb-wildcard-table tr.mlb-wc-qualified {
+    border-left: 3px solid #4caf50;
+}
+.mlb-wildcard-table tr.mlb-wc-eliminated td {
+    color: #999;
+}
+
+/* ── Championships section ── */
+.mlb-championships {
+    background: #fafafa;
+    border-radius: 8px;
+}
+.mlb-trophy-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+.mlb-trophy-row:last-child {
+    border-bottom: none;
+}
+.mlb-trophy-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+.mlb-trophy-info {
+    flex: 1;
+}
+.mlb-trophy-label {
+    font-weight: 700;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 2px;
+}
+.mlb-trophy-years {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* ── Team Roster table ── */
+.mlb-roster-group-header {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a2e;
+    padding: 10px 0 4px;
+    border-bottom: 2px solid #1a1a2e;
+    margin-bottom: 0;
+}
+.mlb-roster-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+.mlb-roster-table th {
+    text-align: left;
+    padding: 6px 8px;
+    background: #f5f5f5;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #666;
+    border-bottom: 1px solid #ddd;
+}
+.mlb-roster-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #eee;
+}
+.mlb-roster-table tr:hover {
+    background: #f8f9fa;
+}
+
+/* Handedness badge (RH/LH/SH) */
+.mlb-hand-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: #666;
+    background: #f0f0f0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 3px;
+    vertical-align: middle;
+    letter-spacing: 0.3px;
+}
+
+/* ─── Batting Highlight & Base Diamond ─── */
+.mlb-team-row.mlb-batting {
+    background: #e8f5e9;
+    border-radius: 4px;
+    margin: 0 -6px;
+    padding: 6px;
+}
+.mlb-diamond {
+    flex-shrink: 0;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* ─── MiLB Sidebar & Level Pills ─── */
+.nav-tabs li.nav-sub {
+    padding-left: 42px;
+    font-size: 13px;
+}
+
+.milb-level-pills {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+}
+.milb-level-pill {
+    padding: 6px 16px;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    border-right: none;
+}
+.milb-level-pill:first-child { border-radius: 4px 0 0 4px; }
+.milb-level-pill:last-child { border-radius: 0 4px 4px 0; border-right: 1px solid #ddd; }
+.milb-level-pill.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+
+/* ─── Postseason Bracket ─── */
+.mlb-ps-inner-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+.mlb-ps-tab {
+    padding: 6px 16px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s, border-color 0.2s;
+}
+.mlb-ps-tab:hover { color: #1a1a2e; }
+.mlb-ps-tab.active { color: #1565c0; border-bottom-color: #1565c0; }
+
+.mlb-ps-bracket-title {
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 16px;
+    color: #1a1a2e;
+}
+
+/* Champion */
+.mlb-ps-champion {
+    text-align: center;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: linear-gradient(135deg, #fff8e1, #fff3e0);
+    border: 2px solid #ffc107;
+    border-radius: 12px;
+}
+.mlb-ps-champion-trophy { font-size: 48px; margin-bottom: 8px; }
+.mlb-ps-champion-logo { width: 80px; height: 80px; object-fit: contain; margin-bottom: 8px; }
+.mlb-ps-champion-name { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+.mlb-ps-champion-label { font-size: 14px; color: #666; font-weight: 600; margin-top: 4px; }
+.mlb-ps-champion-score { font-size: 16px; font-weight: 700; color: #1565c0; margin-top: 6px; }
+
+/* Bracket grid */
+.mlb-ps-bracket {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    align-items: start;
+    overflow-x: auto;
+    padding-bottom: 16px;
+}
+.mlb-ps-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 140px;
+}
+.mlb-ps-col-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #888;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e0e0e0;
+}
+.mlb-ps-col-ds { justify-content: center; }
+.mlb-ps-col-lcs { justify-content: center; }
+.mlb-ps-col-ws { justify-content: center; }
+
+/* Matchup cards */
+.mlb-ps-matchup {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.mlb-ps-matchup.mlb-ps-complete { border-color: #c8e6c9; }
+.mlb-ps-matchup.mlb-ps-tbd {
+    border: 2px dashed #ccc;
+    background: #fafafa;
+}
+.mlb-ps-tbd-label {
+    text-align: center;
+    color: #aaa;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 16px 0;
+}
+.mlb-ps-series-label {
+    font-size: 10px;
+    color: #888;
+    text-align: center;
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.mlb-ps-matchup-divider {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 4px 0;
+}
+.mlb-ps-series-score {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #555;
+    margin-top: 6px;
+}
+
+/* Team slot */
+.mlb-ps-team-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.mlb-ps-team-slot.mlb-ps-winner { background: #e8f5e9; font-weight: 700; }
+.mlb-ps-team-slot.mlb-ps-eliminated { opacity: 0.45; text-decoration: line-through; }
+.mlb-ps-team-slot.mlb-ps-team-tbd { justify-content: center; color: #aaa; padding: 8px; }
+
+/* Seed badge */
+.mlb-ps-seed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #1565c0;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* Team logo in bracket */
+.mlb-ps-team-logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+.mlb-ps-team-abbr {
+    font-size: 13px;
+    font-weight: 600;
+    flex: 1;
+    color: #333;
+}
+
+/* Wild card badge */
+.mlb-ps-wc-badge {
+    font-size: 9px;
+    font-weight: 700;
+    background: #ff9800;
+    color: #fff;
+    padding: 1px 4px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+/* Wins count */
+.mlb-ps-wins {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    min-width: 16px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Bye card */
+.mlb-ps-bye {
+    border: 2px dashed #a5d6a7;
+    border-radius: 8px;
+    padding: 6px 8px;
+    background: #f1f8e9;
+}
+.mlb-ps-bye-inner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.mlb-ps-bye-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #2e7d32;
+    background: #c8e6c9;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: auto;
+}
+
+/* Pre-postseason (Playoff Picture) */
+.mlb-ps-preseason {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+.mlb-ps-preseason-league {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+}
+.mlb-ps-preseason-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e0e0e0;
+}
+.mlb-ps-preseason-league-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+.mlb-ps-preseason-group-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #888;
+    margin-top: 12px;
+    margin-bottom: 6px;
+}
+.mlb-ps-pre-team {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+}
+.mlb-ps-pre-team:hover { background: #f5f7fa; }
+.mlb-ps-pre-team-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+.mlb-ps-pre-record {
+    font-size: 13px;
+    color: #666;
+    font-variant-numeric: tabular-nums;
+}
+.mlb-ps-clinch-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+.mlb-ps-clinch-div { background: #c8e6c9; color: #2e7d32; }
+.mlb-ps-clinch-wc { background: #fff3e0; color: #e65100; }
+.mlb-ps-bye-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: #2e7d32;
+    background: #e8f5e9;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+@media (max-width: 900px) {
+    .mlb-ps-bracket { grid-template-columns: 1fr; }
+    .mlb-ps-preseason { grid-template-columns: 1fr; }
 }
 
 /* Responsive */

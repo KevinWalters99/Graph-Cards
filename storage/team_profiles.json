@@ -1,0 +1,1442 @@
+{
+  "108": {
+    "description": "The Los Angeles Angels are based in Anaheim, California and compete in the American League West. Originally founded as the Los Angeles Angels in 1961 as an expansion team, the franchise has undergone several name changes including the California Angels (1965-1996), Anaheim Angels (1997-2004), and Los Angeles Angels of Anaheim (2005-2015) before settling on the current name. The Angels won their only World Series championship in 2002, defeating the San Francisco Giants in seven games behind the rally monkey phenomenon.\n\nThe franchise has been home to legendary players including Nolan Ryan, Rod Carew, and Mike Trout, who has been the face of the franchise since his debut in 2011. The team has played at Angel Stadium since 1966, making it one of the oldest active ballparks in Major League Baseball.",
+    "stadium": {
+      "name": "Angel Stadium",
+      "location": "Anaheim, California",
+      "capacity": 45517,
+      "opened": 1966,
+      "previousNames": [
+        "Anaheim Stadium (1966-1997)",
+        "Edison International Field of Anaheim (1998-2003)",
+        "Angel Stadium of Anaheim (2004-present)"
+      ],
+      "address": "2000 E Gene Autry Way, Anaheim, CA 92806",
+      "phone": "(714) 940-2000",
+      "website": "https://www.mlb.com/angels/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports West"
+    ],
+    "ticketUrl": "https://www.mlb.com/angels/tickets",
+    "championships": {
+      "worldSeries": [
+        "2002"
+      ],
+      "pennants": [
+        "2002"
+      ],
+      "divisionTitles": [
+        "2004",
+        "2005",
+        "2007",
+        "2008",
+        "2009",
+        "2014"
+      ]
+    }
+  },
+  "109": {
+    "description": "The Arizona Diamondbacks are based in Phoenix, Arizona and compete in the National League West. Founded in 1998 as an expansion franchise, the Diamondbacks achieved one of the fastest championship runs in baseball history by winning the 2001 World Series in just their fourth season of existence. That memorable series saw Randy Johnson and Curt Schilling dominate as co-MVPs, culminating in Luis Gonzalez's walk-off single against Mariano Rivera in Game 7.\n\nThe franchise was born from the efforts of Jerry Colangelo, who brought Major League Baseball to the Phoenix area. The Diamondbacks reached the World Series again in 2023 but fell to the Texas Rangers. The team has played all its home games at Chase Field, which features a retractable roof to combat Arizona's extreme heat.",
+    "stadium": {
+      "name": "Chase Field",
+      "location": "Phoenix, Arizona",
+      "capacity": 48519,
+      "opened": 1998,
+      "previousNames": [
+        "Bank One Ballpark (1998-2005)",
+        "Chase Field (2006-present)"
+      ],
+      "address": "401 E Jefferson St, Phoenix, AZ 85004",
+      "phone": "(602) 462-6500",
+      "website": "https://www.mlb.com/dbacks/ballpark"
+    },
+    "tvChannels": [
+      "Dbacks.TV",
+      "Arizona Sports"
+    ],
+    "ticketUrl": "https://www.mlb.com/dbacks/tickets",
+    "championships": {
+      "worldSeries": [
+        "2001"
+      ],
+      "pennants": [
+        "2001"
+      ],
+      "divisionTitles": [
+        "1999",
+        "2001",
+        "2002",
+        "2007",
+        "2011",
+        "2023"
+      ]
+    }
+  },
+  "110": {
+    "description": "The Baltimore Orioles are one of the American League's charter franchises, with roots dating back to 1901 as the Milwaukee Brewers before becoming the St. Louis Browns in 1902. The franchise relocated to Baltimore in 1954 and quickly became a powerhouse. The Orioles won three World Series championships (1966, 1970, 1983) and six American League pennants during their golden era.\n\nThe franchise produced Hall of Famers including Brooks Robinson, Frank Robinson, Jim Palmer, and Cal Ripken Jr., whose consecutive games streak of 2,632 became one of baseball's most celebrated records. The opening of Oriole Park at Camden Yards in 1992 revolutionized stadium design across all of professional sports, launching the retro-ballpark movement.",
+    "stadium": {
+      "name": "Oriole Park at Camden Yards",
+      "location": "Baltimore, Maryland",
+      "capacity": 45971,
+      "opened": 1992,
+      "previousNames": [],
+      "address": "333 W Camden St, Baltimore, MD 21201",
+      "phone": "(410) 685-9800",
+      "website": "https://www.mlb.com/orioles/ballpark"
+    },
+    "tvChannels": [
+      "MASN"
+    ],
+    "ticketUrl": "https://www.mlb.com/orioles/tickets",
+    "championships": {
+      "worldSeries": [
+        "1966",
+        "1970",
+        "1983"
+      ],
+      "pennants": [
+        "1966",
+        "1969",
+        "1970",
+        "1971",
+        "1979",
+        "1983"
+      ],
+      "divisionTitles": [
+        "1969",
+        "1970",
+        "1971",
+        "1973",
+        "1974",
+        "1979",
+        "1983",
+        "1997",
+        "2014",
+        "2023",
+        "2024"
+      ]
+    }
+  },
+  "111": {
+    "description": "The Boston Red Sox are one of baseball's most storied franchises, founded in 1901 as a charter member of the American League. The Red Sox won five of the first fifteen World Series, but after trading Babe Ruth to the Yankees in 1920, endured the legendary 'Curse of the Bambino' — an 86-year championship drought that became the most famous in sports. The curse was finally broken in 2004 with a dramatic comeback from 3-0 down against the Yankees in the ALCS, followed by a World Series sweep.\n\nThe Red Sox have since won additional World Series titles in 2007, 2013, and 2018, establishing a modern dynasty. Fenway Park, opened in 1912, is the oldest active Major League ballpark and features the iconic Green Monster — a 37-foot left field wall that defines the park's unique character. The franchise has been home to legends including Ted Williams, Carl Yastrzemski, Pedro Martinez, and David Ortiz.",
+    "stadium": {
+      "name": "Fenway Park",
+      "location": "Boston, Massachusetts",
+      "capacity": 37755,
+      "opened": 1912,
+      "previousNames": [],
+      "address": "4 Jersey St, Boston, MA 02215",
+      "phone": "(617) 226-6000",
+      "website": "https://www.mlb.com/redsox/ballpark"
+    },
+    "tvChannels": [
+      "NESN"
+    ],
+    "ticketUrl": "https://www.mlb.com/redsox/tickets",
+    "championships": {
+      "worldSeries": [
+        "1903",
+        "1912",
+        "1915",
+        "1916",
+        "1918",
+        "2004",
+        "2007",
+        "2013",
+        "2018"
+      ],
+      "pennants": [
+        "1903",
+        "1912",
+        "1915",
+        "1916",
+        "1918",
+        "1946",
+        "1967",
+        "1975",
+        "1986",
+        "2004",
+        "2007",
+        "2013",
+        "2018"
+      ],
+      "divisionTitles": [
+        "1975",
+        "1986",
+        "1988",
+        "1990",
+        "1995",
+        "2003",
+        "2007",
+        "2013",
+        "2016",
+        "2017",
+        "2018"
+      ]
+    }
+  },
+  "112": {
+    "description": "The Chicago Cubs are one of the oldest and most beloved franchises in baseball, founded in 1876 as a charter member of the National League. The Cubs won back-to-back World Series in 1907 and 1908, then endured the longest championship drought in North American professional sports — 108 years — before finally winning the 2016 World Series in a legendary seven-game series against the Cleveland Indians.\n\nThe Cubs play at Wrigley Field, the second-oldest active ballpark in MLB (opened 1914), famous for its ivy-covered outfield walls, manual scoreboard, and the surrounding rooftop seating on Waveland and Sheffield Avenues. The franchise has produced Hall of Famers including Ernie Banks ('Mr. Cub'), Ryne Sandberg, Fergie Jenkins, and Ron Santo. The Ricketts family has owned the team since 2009 and undertaken major renovations to preserve Wrigley's historic character.",
+    "stadium": {
+      "name": "Wrigley Field",
+      "location": "Chicago, Illinois",
+      "capacity": 41649,
+      "opened": 1914,
+      "previousNames": [
+        "Weeghman Park (1914-1920)",
+        "Cubs Park (1920-1926)",
+        "Wrigley Field (1926-present)"
+      ],
+      "address": "1060 W Addison St, Chicago, IL 60613",
+      "phone": "(773) 404-2827",
+      "website": "https://www.mlb.com/cubs/ballpark"
+    },
+    "tvChannels": [
+      "Marquee Sports Network"
+    ],
+    "ticketUrl": "https://www.mlb.com/cubs/tickets",
+    "championships": {
+      "worldSeries": [
+        "1907",
+        "1908",
+        "2016"
+      ],
+      "pennants": [
+        "1906",
+        "1907",
+        "1908",
+        "1910",
+        "1918",
+        "1929",
+        "1932",
+        "1935",
+        "1938",
+        "1945",
+        "2016"
+      ],
+      "divisionTitles": [
+        "1984",
+        "1989",
+        "2003",
+        "2007",
+        "2008",
+        "2016",
+        "2017",
+        "2020"
+      ]
+    }
+  },
+  "113": {
+    "description": "The Cincinnati Reds hold a special place in baseball history as the first professional baseball team, founded in 1881 and joining the National League in 1890. The franchise is best known for the 'Big Red Machine' of the 1970s, one of the greatest dynasties in baseball history, which won back-to-back World Series in 1975 and 1976 behind stars like Pete Rose, Johnny Bench, Joe Morgan, and Tony Perez.\n\nThe Reds have won five World Series championships overall (1919, 1940, 1975, 1976, 1990). The team moved to Great American Ball Park in 2003 after leaving Riverfront Stadium/Cinergy Field. Located along the Ohio River in downtown Cincinnati, the park offers stunning views of the Kentucky hills and features one of the most fan-friendly environments in baseball.",
+    "stadium": {
+      "name": "Great American Ball Park",
+      "location": "Cincinnati, Ohio",
+      "capacity": 42319,
+      "opened": 2003,
+      "previousNames": [],
+      "address": "100 Joe Nuxhall Way, Cincinnati, OH 45202",
+      "phone": "(513) 765-7000",
+      "website": "https://www.mlb.com/reds/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Ohio"
+    ],
+    "ticketUrl": "https://www.mlb.com/reds/tickets",
+    "championships": {
+      "worldSeries": [
+        "1919",
+        "1940",
+        "1975",
+        "1976",
+        "1990"
+      ],
+      "pennants": [
+        "1919",
+        "1939",
+        "1940",
+        "1961",
+        "1970",
+        "1972",
+        "1975",
+        "1976",
+        "1990"
+      ],
+      "divisionTitles": [
+        "1970",
+        "1972",
+        "1973",
+        "1975",
+        "1976",
+        "1979",
+        "1990",
+        "1995",
+        "2010",
+        "2012"
+      ]
+    }
+  },
+  "114": {
+    "description": "The Cleveland Guardians, formerly the Cleveland Indians, are a charter member of the American League dating back to 1901. The franchise has won two World Series championships (1920, 1948) and has a rich history that includes setting the American League record with 111 wins in 1954 and a 22-game winning streak in 2017, the longest in AL history.\n\nThe team was renamed from the Indians to the Guardians in 2022, taking their name from the iconic 'Guardians of Traffic' statues on the Hope Memorial Bridge near their ballpark. The franchise moved to Progressive Field (originally Jacobs Field) in 1994, which sparked a renaissance that led to six division titles and two World Series appearances in the 1990s. Notable players include Bob Feller, Larry Doby (the first Black player in the American League), Jim Thome, and Manny Ramirez.",
+    "stadium": {
+      "name": "Progressive Field",
+      "location": "Cleveland, Ohio",
+      "capacity": 34788,
+      "opened": 1994,
+      "previousNames": [
+        "Jacobs Field (1994-2008)",
+        "Progressive Field (2008-present)"
+      ],
+      "address": "2401 Ontario St, Cleveland, OH 44115",
+      "phone": "(216) 420-4200",
+      "website": "https://www.mlb.com/guardians/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Great Lakes"
+    ],
+    "ticketUrl": "https://www.mlb.com/guardians/tickets",
+    "championships": {
+      "worldSeries": [
+        "1920",
+        "1948"
+      ],
+      "pennants": [
+        "1920",
+        "1948",
+        "1954",
+        "1995",
+        "1997",
+        "2016"
+      ],
+      "divisionTitles": [
+        "1995",
+        "1996",
+        "1997",
+        "1998",
+        "1999",
+        "2001",
+        "2007",
+        "2017",
+        "2018",
+        "2022",
+        "2024"
+      ]
+    }
+  },
+  "115": {
+    "description": "The Colorado Rockies were founded in 1993 as an expansion franchise and immediately captured the hearts of Denver fans, drawing over 4.4 million fans in their inaugural season at Mile High Stadium — a single-season attendance record that still stands. The team moved to Coors Field in 1995, a park that became legendary for its offense-friendly conditions due to Denver's high altitude.\n\nThe Rockies reached their only World Series in 2007, sweeping through the NLCS after winning 21 of their final 22 games in a remarkable 'Rocktober' run, but were swept by the Boston Red Sox. The franchise has featured stars like Todd Helton, Larry Walker, and Nolan Arenado. Coors Field's thin air and vast outfield create a unique baseball environment unlike any other park in the majors.",
+    "stadium": {
+      "name": "Coors Field",
+      "location": "Denver, Colorado",
+      "capacity": 50144,
+      "opened": 1995,
+      "previousNames": [],
+      "address": "2001 Blake St, Denver, CO 80205",
+      "phone": "(303) 292-0200",
+      "website": "https://www.mlb.com/rockies/ballpark"
+    },
+    "tvChannels": [
+      "AT&T SportsNet Rocky Mountain"
+    ],
+    "ticketUrl": "https://www.mlb.com/rockies/tickets",
+    "championships": {
+      "worldSeries": [],
+      "pennants": [
+        "2007"
+      ],
+      "divisionTitles": []
+    }
+  },
+  "116": {
+    "description": "The Detroit Tigers are a charter member of the American League, founded in 1901. The Tigers have won four World Series championships (1935, 1945, 1968, 1984) and are one of the most tradition-rich franchises in baseball. The 1968 championship team, led by Denny McLain's 31-win season and Mickey Lolich's three World Series wins, helped unite the city during a turbulent era.\n\nThe franchise has been home to some of baseball's all-time greats including Ty Cobb, Hank Greenberg, Al Kaline, and Miguel Cabrera, who in 2012 became the first player since 1967 to win the Triple Crown. The Tigers moved to Comerica Park in 2000 after 88 years at historic Tiger Stadium on the corner of Michigan and Trumbull avenues.",
+    "stadium": {
+      "name": "Comerica Park",
+      "location": "Detroit, Michigan",
+      "capacity": 41083,
+      "opened": 2000,
+      "previousNames": [],
+      "address": "2100 Woodward Ave, Detroit, MI 48201",
+      "phone": "(313) 962-4000",
+      "website": "https://www.mlb.com/tigers/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Detroit"
+    ],
+    "ticketUrl": "https://www.mlb.com/tigers/tickets",
+    "championships": {
+      "worldSeries": [
+        "1935",
+        "1945",
+        "1968",
+        "1984"
+      ],
+      "pennants": [
+        "1907",
+        "1908",
+        "1909",
+        "1934",
+        "1935",
+        "1940",
+        "1945",
+        "1968",
+        "1984",
+        "2006",
+        "2012"
+      ],
+      "divisionTitles": [
+        "1972",
+        "1984",
+        "1987",
+        "2011",
+        "2012",
+        "2013",
+        "2014"
+      ]
+    }
+  },
+  "117": {
+    "description": "The Houston Astros began as the Houston Colt .45s in 1962 before being renamed the Astros in 1965 when they moved into the revolutionary Astrodome — the world's first multi-purpose domed sports stadium, dubbed the 'Eighth Wonder of the World.' The franchise spent its first 51 years in the National League before moving to the American League West in 2013.\n\nThe Astros won their first World Series championship in 2017, though the title was tarnished by a sign-stealing scandal that resulted in suspensions and fines. The team returned to win the 2022 World Series cleanly, defeating the Philadelphia Phillies. The Astros moved to what is now Daikin Park (originally Enron Field) in 2000 and have featured stars including Craig Biggio, Jeff Bagwell, Nolan Ryan, Jose Altuve, and Justin Verlander.",
+    "stadium": {
+      "name": "Daikin Park",
+      "location": "Houston, Texas",
+      "capacity": 41168,
+      "opened": 2000,
+      "previousNames": [
+        "Enron Field (2000-2002)",
+        "Astros Field (2002, temporary)",
+        "Minute Maid Park (2002-2024)",
+        "Daikin Park (2025-present)"
+      ],
+      "address": "501 Crawford St, Houston, TX 77002",
+      "phone": "(713) 259-8000",
+      "website": "https://www.mlb.com/astros/ballpark"
+    },
+    "tvChannels": [
+      "Space City Home Network"
+    ],
+    "ticketUrl": "https://www.mlb.com/astros/tickets",
+    "championships": {
+      "worldSeries": [
+        "2017",
+        "2022"
+      ],
+      "pennants": [
+        "2005",
+        "2017",
+        "2019",
+        "2021",
+        "2022"
+      ],
+      "divisionTitles": [
+        "1980",
+        "1986",
+        "1997",
+        "1998",
+        "1999",
+        "2001",
+        "2017",
+        "2018",
+        "2019",
+        "2021",
+        "2022",
+        "2023"
+      ]
+    }
+  },
+  "118": {
+    "description": "The Kansas City Royals were founded in 1969 as an expansion franchise named after the American Royal livestock show and rodeo. Despite their relatively short history, the Royals have won two World Series championships (1985, 2015). The 1985 championship featured the famous 'I-70 Series' against the cross-state rival St. Louis Cardinals, while the 2015 title capped a Cinderella run that began with the 2014 Wild Card game.\n\nThe franchise's golden era in the late 1970s and 1980s featured Hall of Famer George Brett, one of baseball's greatest hitters, who famously batted .390 in 1980. Kauffman Stadium, originally Royals Stadium, has been the team's home since 1973 and is one of the few remaining baseball-only stadiums. The park is renowned for its spectacular fountain display beyond the outfield fence.",
+    "stadium": {
+      "name": "Kauffman Stadium",
+      "location": "Kansas City, Missouri",
+      "capacity": 37903,
+      "opened": 1973,
+      "previousNames": [
+        "Royals Stadium (1973-1993)",
+        "Kauffman Stadium (1993-present)"
+      ],
+      "address": "1 Royal Way, Kansas City, MO 64129",
+      "phone": "(816) 921-8000",
+      "website": "https://www.mlb.com/royals/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Kansas City"
+    ],
+    "ticketUrl": "https://www.mlb.com/royals/tickets",
+    "championships": {
+      "worldSeries": [
+        "1985",
+        "2015"
+      ],
+      "pennants": [
+        "1980",
+        "1985",
+        "2014",
+        "2015"
+      ],
+      "divisionTitles": [
+        "1976",
+        "1977",
+        "1978",
+        "1980",
+        "1984",
+        "1985",
+        "2014",
+        "2015"
+      ]
+    }
+  },
+  "119": {
+    "description": "The Los Angeles Dodgers are one of baseball's most iconic franchises, originally founded as the Brooklyn Atlantics in 1883 before becoming the Brooklyn Dodgers. The team made history in 1947 when Jackie Robinson broke baseball's color barrier, forever changing the sport and American society. The Dodgers relocated to Los Angeles in 1958, becoming the first major league team on the West Coast along with the Giants.\n\nThe Dodgers have won seven World Series championships (1955, 1959, 1963, 1965, 1981, 1988, 2020) and 24 National League pennants, tied for the most in NL history. Dodger Stadium, opened in 1962, is the third-oldest active ballpark and the largest by seating capacity. The franchise has featured legends including Sandy Koufax, Don Drysdale, Fernando Valenzuela, Kirk Gibson, and Clayton Kershaw.",
+    "stadium": {
+      "name": "Dodger Stadium",
+      "location": "Los Angeles, California",
+      "capacity": 56000,
+      "opened": 1962,
+      "previousNames": [],
+      "address": "1000 Vin Scully Ave, Los Angeles, CA 90012",
+      "phone": "(323) 224-1507",
+      "website": "https://www.mlb.com/dodgers/ballpark"
+    },
+    "tvChannels": [
+      "SportsNet LA"
+    ],
+    "ticketUrl": "https://www.mlb.com/dodgers/tickets",
+    "championships": {
+      "worldSeries": [
+        "1955",
+        "1959",
+        "1963",
+        "1965",
+        "1981",
+        "1988",
+        "2020",
+        "2024"
+      ],
+      "pennants": [
+        "1916",
+        "1920",
+        "1941",
+        "1947",
+        "1949",
+        "1952",
+        "1953",
+        "1955",
+        "1956",
+        "1959",
+        "1963",
+        "1965",
+        "1966",
+        "1974",
+        "1977",
+        "1978",
+        "1981",
+        "1988",
+        "2017",
+        "2018",
+        "2020",
+        "2024"
+      ],
+      "divisionTitles": [
+        "1974",
+        "1977",
+        "1978",
+        "1981",
+        "1983",
+        "1985",
+        "1988",
+        "1994",
+        "1995",
+        "2004",
+        "2009",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019",
+        "2020",
+        "2021",
+        "2022",
+        "2023",
+        "2024"
+      ]
+    }
+  },
+  "120": {
+    "description": "The Washington Nationals were originally the Montreal Expos, founded in 1969 as MLB's first team based outside the United States. After 36 seasons in Montreal, the franchise relocated to Washington, D.C. in 2005, returning baseball to the nation's capital for the first time since the original Senators departed in 1971.\n\nThe Nationals won their first and only World Series championship in 2019 in dramatic fashion, winning all four road games in the World Series against the Houston Astros after starting the season 19-31. Stephen Strasburg was named World Series MVP and the team was led by stars including Max Scherzer, Anthony Rendon, and Juan Soto. Nationals Park opened in 2008 along the Anacostia River in the Navy Yard neighborhood.",
+    "stadium": {
+      "name": "Nationals Park",
+      "location": "Washington, D.C.",
+      "capacity": 41339,
+      "opened": 2008,
+      "previousNames": [],
+      "address": "1500 S Capitol St SE, Washington, DC 20003",
+      "phone": "(202) 675-6287",
+      "website": "https://www.mlb.com/nationals/ballpark"
+    },
+    "tvChannels": [
+      "MASN"
+    ],
+    "ticketUrl": "https://www.mlb.com/nationals/tickets",
+    "championships": {
+      "worldSeries": [
+        "2019"
+      ],
+      "pennants": [
+        "2019"
+      ],
+      "divisionTitles": [
+        "1981",
+        "2012",
+        "2014",
+        "2016",
+        "2017"
+      ]
+    }
+  },
+  "121": {
+    "description": "The New York Mets were founded in 1962 as an expansion team to fill the void left by the departures of the Brooklyn Dodgers and New York Giants. The early Mets, managed by Casey Stengel, were famously terrible but beloved, setting a modern record with 120 losses in their inaugural season. Just seven years later, the 1969 'Miracle Mets' shocked the baseball world by winning the World Series.\n\nThe Mets won their second championship in 1986, featuring one of baseball's most dramatic moments — the Bill Buckner ground ball in Game 6 against the Red Sox. The team moved to Citi Field in 2009 after 45 years at Shea Stadium. Notable Mets include Tom Seaver ('The Franchise'), Dwight Gooden, Darryl Strawberry, Mike Piazza, David Wright, and Jacob deGrom.",
+    "stadium": {
+      "name": "Citi Field",
+      "location": "Queens, New York",
+      "capacity": 41922,
+      "opened": 2009,
+      "previousNames": [],
+      "address": "41 Seaver Way, Queens, NY 11368",
+      "phone": "(718) 507-6387",
+      "website": "https://www.mlb.com/mets/ballpark"
+    },
+    "tvChannels": [
+      "SNY"
+    ],
+    "ticketUrl": "https://www.mlb.com/mets/tickets",
+    "championships": {
+      "worldSeries": [
+        "1969",
+        "1986"
+      ],
+      "pennants": [
+        "1969",
+        "1973",
+        "1986",
+        "2000",
+        "2015"
+      ],
+      "divisionTitles": [
+        "1969",
+        "1973",
+        "1986",
+        "1988",
+        "2006",
+        "2015",
+        "2022"
+      ]
+    }
+  },
+  "133": {
+    "description": "The Oakland Athletics have one of baseball's most colorful and nomadic histories. Founded in 1901 as the Philadelphia Athletics by Connie Mack, the team won five World Series in Philadelphia before moving to Kansas City in 1955 and then Oakland in 1968. The franchise has won nine World Series championships total, including a dynasty run of three consecutive titles from 1972-1974.\n\nCharlie Finley's flamboyant ownership in the 1970s and Billy Beane's 'Moneyball' revolution in the early 2000s made the A's one of baseball's most innovative organizations. After decades at the Oakland Coliseum, the team relocated to Sacramento for the 2025 season with plans to move to a new stadium in Las Vegas. Notable players include Reggie Jackson, Rickey Henderson, Dennis Eckersley, and Jose Canseco.",
+    "stadium": {
+      "name": "Sutter Health Park",
+      "location": "West Sacramento, California",
+      "capacity": 14014,
+      "opened": 2000,
+      "previousNames": [
+        "Raley Field (2000-2021)",
+        "Sutter Health Park (2021-present)"
+      ],
+      "address": "400 Ballpark Dr, West Sacramento, CA 95691",
+      "phone": "(916) 376-4700",
+      "website": "https://www.mlb.com/athletics/ballpark"
+    },
+    "tvChannels": [
+      "NBC Sports California"
+    ],
+    "ticketUrl": "https://www.mlb.com/athletics/tickets",
+    "championships": {
+      "worldSeries": [
+        "1910",
+        "1911",
+        "1913",
+        "1929",
+        "1930",
+        "1972",
+        "1973",
+        "1974",
+        "1989"
+      ],
+      "pennants": [
+        "1902",
+        "1905",
+        "1910",
+        "1911",
+        "1913",
+        "1914",
+        "1929",
+        "1930",
+        "1931",
+        "1972",
+        "1973",
+        "1974",
+        "1988",
+        "1989",
+        "1990"
+      ],
+      "divisionTitles": [
+        "1971",
+        "1972",
+        "1973",
+        "1974",
+        "1975",
+        "1981",
+        "1988",
+        "1989",
+        "1990",
+        "1992",
+        "2000",
+        "2002",
+        "2003",
+        "2006",
+        "2012",
+        "2013",
+        "2020"
+      ]
+    }
+  },
+  "134": {
+    "description": "The Pittsburgh Pirates are one of the oldest franchises in baseball, founded in 1881 and joining the National League in 1882. The Pirates have won five World Series championships (1909, 1925, 1960, 1971, 1979), with the 1960 title featuring Bill Mazeroski's legendary walk-off home run in Game 7 — the only time a World Series has ended on a Game 7 walk-off homer.\n\nThe franchise's 'We Are Family' 1979 championship team, led by Willie Stargell, remains one of baseball's most beloved squads. The Pirates played at Forbes Field and Three Rivers Stadium before moving to PNC Park in 2001, widely regarded as one of the most beautiful ballparks in America with its stunning views of the Pittsburgh skyline and Roberto Clemente Bridge. Roberto Clemente, the franchise's greatest player, was a humanitarian icon who tragically died in a plane crash while delivering earthquake relief supplies.",
+    "stadium": {
+      "name": "PNC Park",
+      "location": "Pittsburgh, Pennsylvania",
+      "capacity": 38747,
+      "opened": 2001,
+      "previousNames": [],
+      "address": "115 Federal St, Pittsburgh, PA 15212",
+      "phone": "(412) 323-5000",
+      "website": "https://www.mlb.com/pirates/ballpark"
+    },
+    "tvChannels": [
+      "SportsNet Pittsburgh"
+    ],
+    "ticketUrl": "https://www.mlb.com/pirates/tickets",
+    "championships": {
+      "worldSeries": [
+        "1909",
+        "1925",
+        "1960",
+        "1971",
+        "1979"
+      ],
+      "pennants": [
+        "1901",
+        "1902",
+        "1903",
+        "1909",
+        "1925",
+        "1927",
+        "1960",
+        "1971",
+        "1979"
+      ],
+      "divisionTitles": [
+        "1970",
+        "1971",
+        "1972",
+        "1974",
+        "1975",
+        "1979",
+        "1990",
+        "1991",
+        "1992"
+      ]
+    }
+  },
+  "135": {
+    "description": "The San Diego Padres were founded in 1969 as an expansion franchise and have competed in the National League West for their entire history. Despite never winning a World Series, the Padres have reached the Fall Classic twice — in 1984 and 1998. The franchise has featured some of baseball's brightest stars including Tony Gwynn, who spent his entire 20-year career as a Padre and won eight National League batting titles.\n\nThe Padres moved to Petco Park in 2004, a stunning downtown ballpark in the Gaslamp Quarter that helped revitalize San Diego's urban core. Under the ownership of Peter Seidler, the team made aggressive moves to build a championship contender, acquiring stars like Manny Machado and Fernando Tatis Jr. The franchise retired Tony Gwynn's number 19, and his legacy looms large over the organization.",
+    "stadium": {
+      "name": "Petco Park",
+      "location": "San Diego, California",
+      "capacity": 40209,
+      "opened": 2004,
+      "previousNames": [],
+      "address": "100 Park Blvd, San Diego, CA 92101",
+      "phone": "(619) 795-5000",
+      "website": "https://www.mlb.com/padres/ballpark"
+    },
+    "tvChannels": [
+      "Padres.TV",
+      "San Diego Sports"
+    ],
+    "ticketUrl": "https://www.mlb.com/padres/tickets",
+    "championships": {
+      "worldSeries": [],
+      "pennants": [
+        "1984",
+        "1998"
+      ],
+      "divisionTitles": [
+        "1984",
+        "1996",
+        "1998",
+        "2005",
+        "2006"
+      ]
+    }
+  },
+  "136": {
+    "description": "The Seattle Mariners were founded in 1977 as an expansion franchise. Despite being one of the few teams to never reach the World Series, the Mariners have produced some of baseball's most remarkable achievements. The 2001 Mariners tied the all-time wins record with 116 victories, and the franchise has been home to three of the greatest players in history: Ken Griffey Jr., Randy Johnson, and Ichiro Suzuki.\n\nThe Mariners' 2022 playoff appearance ended a 21-year postseason drought, the longest in North American professional sports at the time. The team moved to T-Mobile Park (originally Safeco Field) in 1999 after years in the Kingdome. The retractable-roof stadium features views of the Seattle skyline and Puget Sound, and its opening helped save baseball in Seattle when the franchise was nearly relocated.",
+    "stadium": {
+      "name": "T-Mobile Park",
+      "location": "Seattle, Washington",
+      "capacity": 47929,
+      "opened": 1999,
+      "previousNames": [
+        "Safeco Field (1999-2018)",
+        "T-Mobile Park (2019-present)"
+      ],
+      "address": "1250 1st Ave S, Seattle, WA 98134",
+      "phone": "(206) 346-4000",
+      "website": "https://www.mlb.com/mariners/ballpark"
+    },
+    "tvChannels": [
+      "ROOT Sports Northwest"
+    ],
+    "ticketUrl": "https://www.mlb.com/mariners/tickets",
+    "championships": {
+      "worldSeries": [],
+      "pennants": [],
+      "divisionTitles": [
+        "1995",
+        "1997",
+        "2001"
+      ]
+    }
+  },
+  "137": {
+    "description": "The San Francisco Giants are one of baseball's oldest and most successful franchises, founded in 1883 as the New York Gothams before becoming the New York Giants. The franchise moved to San Francisco in 1958 alongside the Brooklyn Dodgers' move to Los Angeles. In New York, the Giants won five World Series and featured legends like Christy Mathewson, John McGraw, and Willie Mays.\n\nIn San Francisco, the Giants won three World Series championships in a five-year span (2010, 2012, 2014), an even-year dynasty led by Madison Bumgarner, Buster Posey, and manager Bruce Bochy. Oracle Park (originally Pacific Bell Park), which opened in 2000, is considered one of baseball's crown jewels with its iconic right field wall along McCovey Cove, where kayakers gather to catch home run balls. The franchise has won a total of eight World Series titles.",
+    "stadium": {
+      "name": "Oracle Park",
+      "location": "San Francisco, California",
+      "capacity": 41265,
+      "opened": 2000,
+      "previousNames": [
+        "Pacific Bell Park (2000-2003)",
+        "SBC Park (2004-2006)",
+        "AT&T Park (2006-2019)",
+        "Oracle Park (2019-present)"
+      ],
+      "address": "24 Willie Mays Plaza, San Francisco, CA 94107",
+      "phone": "(415) 972-2000",
+      "website": "https://www.mlb.com/giants/ballpark"
+    },
+    "tvChannels": [
+      "NBC Sports Bay Area"
+    ],
+    "ticketUrl": "https://www.mlb.com/giants/tickets",
+    "championships": {
+      "worldSeries": [
+        "1905",
+        "1921",
+        "1922",
+        "1933",
+        "1954",
+        "2010",
+        "2012",
+        "2014"
+      ],
+      "pennants": [
+        "1904",
+        "1905",
+        "1911",
+        "1912",
+        "1913",
+        "1917",
+        "1921",
+        "1922",
+        "1923",
+        "1924",
+        "1933",
+        "1936",
+        "1937",
+        "1951",
+        "1954",
+        "1962",
+        "1989",
+        "2002",
+        "2010",
+        "2012",
+        "2014"
+      ],
+      "divisionTitles": [
+        "1971",
+        "1987",
+        "1989",
+        "1997",
+        "2000",
+        "2003",
+        "2010",
+        "2012",
+        "2021"
+      ]
+    }
+  },
+  "138": {
+    "description": "The St. Louis Cardinals are one of the most successful franchises in National League history, with 11 World Series championships — second only to the New York Yankees in all of baseball. Founded in 1882, the Cardinals have been a model of sustained excellence, making the postseason in 31 different years. The 'Gashouse Gang' of the 1930s and the championship teams of the 1940s, 1960s, and 2000s each defined their eras.\n\nThe Cardinals are renowned for their passionate fan base and the tradition of 'Cardinal Way' player development. The franchise has produced Hall of Famers including Stan Musial, Bob Gibson, Lou Brock, Ozzie Smith, and Albert Pujols. Busch Stadium, the third ballpark to bear the name, opened in 2006 in downtown St. Louis with views of the Gateway Arch and has consistently been one of baseball's best-attended venues.",
+    "stadium": {
+      "name": "Busch Stadium",
+      "location": "St. Louis, Missouri",
+      "capacity": 45494,
+      "opened": 2006,
+      "previousNames": [],
+      "address": "700 Clark Ave, St. Louis, MO 63102",
+      "phone": "(314) 345-9600",
+      "website": "https://www.mlb.com/cardinals/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Midwest"
+    ],
+    "ticketUrl": "https://www.mlb.com/cardinals/tickets",
+    "championships": {
+      "worldSeries": [
+        "1926",
+        "1931",
+        "1934",
+        "1942",
+        "1944",
+        "1946",
+        "1964",
+        "1967",
+        "1982",
+        "2006",
+        "2011"
+      ],
+      "pennants": [
+        "1926",
+        "1928",
+        "1930",
+        "1931",
+        "1934",
+        "1942",
+        "1943",
+        "1944",
+        "1946",
+        "1964",
+        "1967",
+        "1968",
+        "1982",
+        "1985",
+        "1987",
+        "2004",
+        "2006",
+        "2011",
+        "2013"
+      ],
+      "divisionTitles": [
+        "1982",
+        "1985",
+        "1987",
+        "1996",
+        "2000",
+        "2002",
+        "2004",
+        "2005",
+        "2006",
+        "2009",
+        "2013",
+        "2014",
+        "2015",
+        "2019",
+        "2022"
+      ]
+    }
+  },
+  "139": {
+    "description": "The Tampa Bay Rays (originally the Devil Rays) were founded in 1998 as an expansion franchise. After a decade of struggle, the Rays transformed into one of baseball's most innovative and analytically driven organizations. The 2008 team stunned baseball by going from worst to first, winning the American League pennant in just their 11th season.\n\nThe Rays have consistently competed despite having one of the smallest payrolls in baseball, making the playoffs seven times since 2008 including a World Series appearance in 2020. The franchise is known for pioneering the use of 'openers,' extreme defensive shifts, and creative roster management. The team plays at Tropicana Field, an indoor domed stadium in St. Petersburg that has been the subject of ongoing relocation discussions.",
+    "stadium": {
+      "name": "Tropicana Field",
+      "location": "St. Petersburg, Florida",
+      "capacity": 25000,
+      "opened": 1990,
+      "previousNames": [
+        "Florida Suncoast Dome (1990-1993)",
+        "ThunderDome (1993-1996)",
+        "Tropicana Field (1996-present)"
+      ],
+      "address": "1 Tropicana Dr, St. Petersburg, FL 33705",
+      "phone": "(727) 825-3137",
+      "website": "https://www.mlb.com/rays/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Sun"
+    ],
+    "ticketUrl": "https://www.mlb.com/rays/tickets",
+    "championships": {
+      "worldSeries": [],
+      "pennants": [
+        "2008",
+        "2020"
+      ],
+      "divisionTitles": [
+        "2008",
+        "2010",
+        "2020",
+        "2021"
+      ]
+    }
+  },
+  "140": {
+    "description": "The Texas Rangers were originally the Washington Senators (the second team to bear that name), founded in 1961 as an expansion franchise before relocating to the Dallas-Fort Worth area in 1972. After decades without a championship, the Rangers reached back-to-back World Series in 2010 and 2011, falling short both times before finally winning their first title in 2023.\n\nThe 2023 championship was the first season at Globe Life Field, a retractable-roof stadium that replaced the open-air Globe Life Park. The Rangers' World Series victory over the Arizona Diamondbacks was highlighted by Corey Seager's World Series MVP performance. The franchise has featured stars including Nolan Ryan, Ivan Rodriguez, Juan Gonzalez, and Adrian Beltre.",
+    "stadium": {
+      "name": "Globe Life Field",
+      "location": "Arlington, Texas",
+      "capacity": 40300,
+      "opened": 2020,
+      "previousNames": [],
+      "address": "734 Stadium Dr, Arlington, TX 76011",
+      "phone": "(817) 533-1972",
+      "website": "https://www.mlb.com/rangers/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Southwest"
+    ],
+    "ticketUrl": "https://www.mlb.com/rangers/tickets",
+    "championships": {
+      "worldSeries": [
+        "2023"
+      ],
+      "pennants": [
+        "2010",
+        "2011",
+        "2023"
+      ],
+      "divisionTitles": [
+        "1996",
+        "1998",
+        "1999",
+        "2010",
+        "2011",
+        "2016"
+      ]
+    }
+  },
+  "141": {
+    "description": "The Toronto Blue Jays were founded in 1977 as an expansion franchise and are the only current MLB team based outside the United States. The Blue Jays dominated the early 1990s, winning back-to-back World Series championships in 1992 and 1993. The 1993 title was clinched by Joe Carter's iconic walk-off home run in Game 6 — one of the most famous moments in baseball history.\n\nThe Blue Jays play at Rogers Centre (originally SkyDome), which was the world's first stadium with a fully retractable motorized roof when it opened in 1989. The franchise has featured stars including Roberto Alomar, John Olerud, Roy Halladay, Jose Bautista (known for his bat flip in the 2015 ALDS), and Vladimir Guerrero Jr. The team draws fans from across Canada and has a passionate national following.",
+    "stadium": {
+      "name": "Rogers Centre",
+      "location": "Toronto, Ontario, Canada",
+      "capacity": 49286,
+      "opened": 1989,
+      "previousNames": [
+        "SkyDome (1989-2005)",
+        "Rogers Centre (2005-present)"
+      ],
+      "address": "1 Blue Jays Way, Toronto, ON M5V 1J1, Canada",
+      "phone": "(416) 341-1000",
+      "website": "https://www.mlb.com/bluejays/ballpark"
+    },
+    "tvChannels": [
+      "Sportsnet"
+    ],
+    "ticketUrl": "https://www.mlb.com/bluejays/tickets",
+    "championships": {
+      "worldSeries": [
+        "1992",
+        "1993"
+      ],
+      "pennants": [
+        "1992",
+        "1993"
+      ],
+      "divisionTitles": [
+        "1985",
+        "1989",
+        "1991",
+        "1992",
+        "1993",
+        "2015"
+      ]
+    }
+  },
+  "142": {
+    "description": "The Minnesota Twins originated as the Washington Senators in 1901, one of the American League's charter franchises. The team relocated to the Twin Cities in 1961 and was renamed the Twins in honor of Minneapolis and St. Paul. The franchise has won three World Series championships — in 1924 (as the Senators), 1987, and 1991. Both the 1987 and 1991 titles were won with the benefit of the deafening Metrodome crowd.\n\nThe Twins moved to Target Field in 2010, returning to outdoor baseball after 28 years in the Metrodome. The open-air ballpark in downtown Minneapolis is considered one of baseball's best venues. The franchise has produced Hall of Famers including Walter Johnson, Harmon Killebrew, Rod Carew, Kirby Puckett (whose Game 6 heroics in 1991 are legendary), and Tony Oliva.",
+    "stadium": {
+      "name": "Target Field",
+      "location": "Minneapolis, Minnesota",
+      "capacity": 38544,
+      "opened": 2010,
+      "previousNames": [],
+      "address": "1 Twins Way, Minneapolis, MN 55403",
+      "phone": "(612) 659-3400",
+      "website": "https://www.mlb.com/twins/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports North"
+    ],
+    "ticketUrl": "https://www.mlb.com/twins/tickets",
+    "championships": {
+      "worldSeries": [
+        "1924",
+        "1987",
+        "1991"
+      ],
+      "pennants": [
+        "1924",
+        "1925",
+        "1933",
+        "1965",
+        "1987",
+        "1991"
+      ],
+      "divisionTitles": [
+        "1969",
+        "1970",
+        "1987",
+        "1991",
+        "2002",
+        "2003",
+        "2004",
+        "2006",
+        "2009",
+        "2010",
+        "2019",
+        "2023"
+      ]
+    }
+  },
+  "143": {
+    "description": "The Philadelphia Phillies are one of the oldest franchises in professional sports, founded in 1883 as a National League team. For much of their history, the Phillies struggled — they hold the record for the most losses by any team in professional sports history (over 11,000). However, the franchise has experienced golden eras, winning the World Series in 1980 (their first championship after 97 years) and 2008.\n\nThe 2008 championship team featured Ryan Howard, Chase Utley, and Jimmy Rollins. The Phillies reached the World Series again in 2009, 2022, and 2023, falling short each time. Citizens Bank Park opened in 2004 in South Philadelphia's sports complex and is known for its raucous fan base. Historic Phillies include Mike Schmidt, Steve Carlton, Robin Roberts, and Richie Ashburn.",
+    "stadium": {
+      "name": "Citizens Bank Park",
+      "location": "Philadelphia, Pennsylvania",
+      "capacity": 42901,
+      "opened": 2004,
+      "previousNames": [],
+      "address": "1 Citizens Bank Way, Philadelphia, PA 19148",
+      "phone": "(215) 463-1000",
+      "website": "https://www.mlb.com/phillies/ballpark"
+    },
+    "tvChannels": [
+      "NBC Sports Philadelphia"
+    ],
+    "ticketUrl": "https://www.mlb.com/phillies/tickets",
+    "championships": {
+      "worldSeries": [
+        "1980",
+        "2008"
+      ],
+      "pennants": [
+        "1915",
+        "1950",
+        "1980",
+        "1983",
+        "1993",
+        "2008",
+        "2009",
+        "2022",
+        "2024"
+      ],
+      "divisionTitles": [
+        "1976",
+        "1977",
+        "1978",
+        "1980",
+        "1983",
+        "1993",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2023"
+      ]
+    }
+  },
+  "144": {
+    "description": "The Atlanta Braves are one of baseball's oldest and most successful franchises, tracing their origins to the Boston Red Stockings in 1871. The team played in Boston until 1952, moved to Milwaukee (where they won the 1957 World Series), and relocated to Atlanta in 1966. The Braves won an unprecedented 14 consecutive division titles from 1991 to 2005, though they converted only one into a World Series championship (1995).\n\nThe franchise won its most recent title in 2021, defeating the Houston Astros. The Braves moved to Truist Park in the Cumberland/Cobb County area in 2017 after 20 years at Turner Field. The franchise has featured some of baseball's all-time greats including Hank Aaron (who broke Babe Ruth's career home run record as a Brave), Greg Maddux, Tom Glavine, John Smoltz, and Chipper Jones.",
+    "stadium": {
+      "name": "Truist Park",
+      "location": "Cumberland, Georgia",
+      "capacity": 41084,
+      "opened": 2017,
+      "previousNames": [
+        "SunTrust Park (2017-2020)",
+        "Truist Park (2020-present)"
+      ],
+      "address": "755 Battery Ave SE, Atlanta, GA 30339",
+      "phone": "(404) 577-9100",
+      "website": "https://www.mlb.com/braves/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Southeast"
+    ],
+    "ticketUrl": "https://www.mlb.com/braves/tickets",
+    "championships": {
+      "worldSeries": [
+        "1914",
+        "1957",
+        "1995",
+        "2021"
+      ],
+      "pennants": [
+        "1914",
+        "1948",
+        "1957",
+        "1958",
+        "1991",
+        "1992",
+        "1995",
+        "1996",
+        "1999",
+        "2021"
+      ],
+      "divisionTitles": [
+        "1969",
+        "1982",
+        "1991",
+        "1992",
+        "1993",
+        "1995",
+        "1996",
+        "1997",
+        "1998",
+        "1999",
+        "2000",
+        "2001",
+        "2002",
+        "2003",
+        "2004",
+        "2005",
+        "2013",
+        "2018",
+        "2019",
+        "2020",
+        "2021",
+        "2022",
+        "2023"
+      ]
+    }
+  },
+  "145": {
+    "description": "The Chicago White Sox are a professional baseball team based on the South Side of Chicago, competing in the American League Central. Founded in 1900 as the Chicago White Stockings (renamed White Sox in 1904), they are one of the original eight charter franchises of the American League. The White Sox have won three World Series championships (1906, 1917, 2005) and six American League pennants.\n\nThe 1919 'Black Sox' scandal, in which eight players were accused of intentionally losing the World Series, remains one of the most infamous episodes in sports history. The franchise endured an 88-year championship drought before the 2005 team swept the Houston Astros in the World Series behind dominant pitching. The White Sox have been home to legends including Shoeless Joe Jackson, Nellie Fox, Luis Aparicio, Frank Thomas ('The Big Hurt'), and Paul Konerko.",
+    "stadium": {
+      "name": "Rate Field",
+      "location": "Chicago, Illinois",
+      "capacity": 40615,
+      "opened": 1991,
+      "previousNames": [
+        "New Comiskey Park (1991-2003)",
+        "U.S. Cellular Field (2003-2016)",
+        "Guaranteed Rate Field (2017-2024)",
+        "Rate Field (2025-present)"
+      ],
+      "address": "333 W 35th St, Chicago, IL 60616",
+      "phone": "(312) 674-1000",
+      "website": "https://www.mlb.com/whitesox/ballpark"
+    },
+    "tvChannels": [
+      "NBC Sports Chicago"
+    ],
+    "ticketUrl": "https://www.mlb.com/whitesox/tickets",
+    "championships": {
+      "worldSeries": [
+        "1906",
+        "1917",
+        "2005"
+      ],
+      "pennants": [
+        "1901",
+        "1906",
+        "1917",
+        "1919",
+        "1959",
+        "2005"
+      ],
+      "divisionTitles": [
+        "1983",
+        "1993",
+        "2000",
+        "2005",
+        "2008"
+      ]
+    }
+  },
+  "146": {
+    "description": "The Miami Marlins (originally the Florida Marlins) were founded in 1993 as an expansion franchise. Despite being one of baseball's youngest teams, the Marlins have won two World Series championships (1997, 2003) — remarkably, both times as a Wild Card team. The 1997 title featured the dramatic walk-off hit by Edgar Renteria in Game 7, while the 2003 championship saw a young Miguel Cabrera and Josh Beckett lead the upset over the heavily favored Yankees.\n\nThe franchise has been marked by cycles of building championship teams and then dismantling them through fire sales. The team moved from Sun Life Stadium to loanDepot Park (originally Marlins Park) in 2012, a retractable-roof stadium in Miami's Little Havana neighborhood. Notable Marlins include Hanley Ramirez, Giancarlo Stanton, Jose Fernandez, and Dontrelle Willis.",
+    "stadium": {
+      "name": "loanDepot Park",
+      "location": "Miami, Florida",
+      "capacity": 36742,
+      "opened": 2012,
+      "previousNames": [
+        "Marlins Park (2012-2021)",
+        "loanDepot Park (2021-present)"
+      ],
+      "address": "501 Marlins Way, Miami, FL 33125",
+      "phone": "(305) 480-1300",
+      "website": "https://www.mlb.com/marlins/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Florida"
+    ],
+    "ticketUrl": "https://www.mlb.com/marlins/tickets",
+    "championships": {
+      "worldSeries": [
+        "1997",
+        "2003"
+      ],
+      "pennants": [
+        "1997",
+        "2003"
+      ],
+      "divisionTitles": []
+    }
+  },
+  "147": {
+    "description": "The New York Yankees are the most successful franchise in North American professional sports, with 27 World Series championships. Founded in 1901 as the Baltimore Orioles before moving to New York in 1903 (renamed the Yankees in 1913), the franchise has defined baseball excellence across multiple eras — from the Babe Ruth and Lou Gehrig era of the 1920s-30s, to the Mickey Mantle dynasty of the 1950s-60s, to the Derek Jeter 'Core Four' championships of the late 1990s.\n\nThe Yankees moved to the new Yankee Stadium in 2009, located across the street from the original 'House That Ruth Built' (1923-2008). The franchise's iconic interlocking NY logo is one of the most recognized symbols in sports worldwide. The Yankees have retired 23 numbers, more than any other MLB team, and their Monument Park honors the greatest players in franchise history.",
+    "stadium": {
+      "name": "Yankee Stadium",
+      "location": "Bronx, New York",
+      "capacity": 46537,
+      "opened": 2009,
+      "previousNames": [],
+      "address": "1 E 161st St, Bronx, NY 10451",
+      "phone": "(718) 293-4300",
+      "website": "https://www.mlb.com/yankees/ballpark"
+    },
+    "tvChannels": [
+      "YES Network"
+    ],
+    "ticketUrl": "https://www.mlb.com/yankees/tickets",
+    "championships": {
+      "worldSeries": [
+        "1923",
+        "1927",
+        "1928",
+        "1932",
+        "1936",
+        "1937",
+        "1938",
+        "1939",
+        "1941",
+        "1943",
+        "1947",
+        "1949",
+        "1950",
+        "1951",
+        "1952",
+        "1953",
+        "1956",
+        "1958",
+        "1961",
+        "1962",
+        "1977",
+        "1978",
+        "1996",
+        "1998",
+        "1999",
+        "2000",
+        "2009"
+      ],
+      "pennants": [
+        "1921",
+        "1922",
+        "1923",
+        "1926",
+        "1927",
+        "1928",
+        "1932",
+        "1936",
+        "1937",
+        "1938",
+        "1939",
+        "1941",
+        "1942",
+        "1943",
+        "1947",
+        "1949",
+        "1950",
+        "1951",
+        "1952",
+        "1953",
+        "1955",
+        "1956",
+        "1957",
+        "1958",
+        "1960",
+        "1961",
+        "1962",
+        "1963",
+        "1964",
+        "1976",
+        "1977",
+        "1978",
+        "1981",
+        "1996",
+        "1998",
+        "1999",
+        "2000",
+        "2001",
+        "2003",
+        "2009",
+        "2024"
+      ],
+      "divisionTitles": [
+        "1976",
+        "1977",
+        "1978",
+        "1980",
+        "1981",
+        "1996",
+        "1998",
+        "1999",
+        "2000",
+        "2001",
+        "2002",
+        "2003",
+        "2004",
+        "2005",
+        "2006",
+        "2009",
+        "2011",
+        "2012",
+        "2019",
+        "2022",
+        "2024"
+      ]
+    }
+  },
+  "158": {
+    "description": "The Milwaukee Brewers were founded in 1969 as the Seattle Pilots before relocating to Milwaukee after just one season. The franchise played in the American League until switching to the National League Central in 1998. The Brewers reached their only World Series in 1982, losing to the St. Louis Cardinals in seven games. That team, known as 'Harvey's Wallbangers,' featured Hall of Famers Robin Yount and Paul Molitor.\n\nThe Brewers moved to American Family Field (originally Miller Park) in 2001, a retractable-roof stadium with a distinctive fan-shaped roof. The park's tailgating culture and racing sausages have become beloved traditions. The franchise experienced a resurgence in the late 2010s and 2020s with stars like Christian Yelich, who won the 2018 NL MVP. Milwaukee remains one of baseball's smallest markets but boasts one of its most loyal fan bases.",
+    "stadium": {
+      "name": "American Family Field",
+      "location": "Milwaukee, Wisconsin",
+      "capacity": 41900,
+      "opened": 2001,
+      "previousNames": [
+        "Miller Park (2001-2020)",
+        "American Family Field (2021-present)"
+      ],
+      "address": "1 Brewers Way, Milwaukee, WI 53214",
+      "phone": "(414) 902-4400",
+      "website": "https://www.mlb.com/brewers/ballpark"
+    },
+    "tvChannels": [
+      "Bally Sports Wisconsin"
+    ],
+    "ticketUrl": "https://www.mlb.com/brewers/tickets",
+    "championships": {
+      "worldSeries": [],
+      "pennants": [
+        "1982"
+      ],
+      "divisionTitles": [
+        "1981",
+        "1982",
+        "2011",
+        "2018",
+        "2023",
+        "2024"
+      ]
+    }
+  }
+}
