@@ -172,8 +172,8 @@ def worker_loop(session_id, model_name):
             # Mark transcribing
             with db.cursor() as cur:
                 cur.execute(
-                    "UPDATE CG_TranscriptionSegments SET transcription_status = 'transcribing' "
-                    "WHERE segment_id = %s", (seg_id,)
+                    "UPDATE CG_TranscriptionSegments SET transcription_status = 'transcribing', "
+                    "worker_source = 'pc' WHERE segment_id = %s", (seg_id,)
                 )
 
             log_event(db, session_id, 'info', 'pc_transcribing',
