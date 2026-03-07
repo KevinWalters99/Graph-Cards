@@ -1,0 +1,8 @@
+THINGS TO DO
+============
+
+1. Per-Provider API Key Storage
+   - Currently only one api_key column in CG_AiParseConfig
+   - When switching providers (Groq/Gemini), the saved key is overwritten
+   - Add separate key columns (groq_api_key, gemini_api_key) so switching providers preserves both keys
+   - UI should show correct masked key per selected provider without re-entering
