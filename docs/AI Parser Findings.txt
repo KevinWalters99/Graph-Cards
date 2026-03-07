@@ -1,0 +1,139 @@
+AI Parser Findings
+Date: 2026-03-07
+Scope: Review of current codebase for both parsing pipelines:
+1) Programmatic Parse (rule-based, deterministic)
+2) AI Parse (LLM provider-based: Grok/Gemini)
+
+Summary
+- The Programmatic pipeline is implemented and wired end-to-end.
+- The AI Parse pipeline is not implemented in this repo (no provider call path found for Grok/Gemini).
+- Current user-facing "Parse Session" flow is fully rule-based and does not invoke any LLM.
+
+------------------------------------------------------------
+High Severity Findings
+------------------------------------------------------------
+
+1) AI provider pipeline is missing (root blocker for Gemini/Grok)
+- Impact: Gemini cannot "talk" because no Gemini request code path exists in the parser flow.
+- Evidence:
+  - parse endpoint uses deterministic extraction only:
+    - /cardgraph/src/Controllers/TranscriptionController.php:1119
+    - /cardgraph/src/Controllers/TranscriptionController.php:1196
+    - /cardgraph/src/Controllers/TranscriptionController.php:1820
+  - Frontend parse button posts directly to deterministic backend parse endpoint:
+    - /cardgraph/public/js/table-transcription.js:514
+    - /cardgraph/public/js/table-transcription.js:522
+  - No Grok/Gemini provider references in backend parser code.
+
+2) Existing TODO references an AI config table that is not implemented here
+- Impact: Team expectations and codebase are out of sync; likely confusion during integration attempts.
+- Evidence:
+  - /docs/THINGS-TO-DO.txt:5
+  - /docs/THINGS-TO-DO.txt:6
+  - /docs/THINGS-TO-DO.txt:7
+  - /docs/THINGS-TO-DO.txt:8
+- Note: No `CG_AiParseConfig` migration/controller/UI path was found in this repo.
+
+------------------------------------------------------------
+Medium Severity Findings
+------------------------------------------------------------
+
+3) Parse history UI suggests multi-run review, but backend purges old-run records
+- Impact: Older runs appear selectable but can return empty data after subsequent parses.
+- Evidence:
+  - Old records are deleted during new parse run:
+    - /cardgraph/src/Controllers/TranscriptionController.php:1201
+    - /cardgraph/src/Controllers/TranscriptionController.php:1202
+  - Parse run history remains and is shown in UI:
+    - /cardgraph/src/Controllers/TranscriptionController.php:1512
+    - /cardgraph/public/js/table-transcription.js:226
+    - /cardgraph/public/js/table-transcription.js:258
+
+4) Programmatic parser behavior does not fully match design docs
+- Impact: Lower extraction quality vs expected spec (teams/lot structure/multi-card handling in docs).
+- Evidence:
+  - Design doc expects richer lot/card hierarchy:
+    - /docs/Parser.txt (sections: hierarchy, lot cards, multi-card handling)
+  - Implementation is player-anchored extraction into flat records:
+    - /cardgraph/src/Controllers/TranscriptionController.php:1818
+  - Team alias table is loaded but team detection from context is not performed in extraction:
+    - /cardgraph/src/Controllers/TranscriptionController.php:1776
+    - /cardgraph/src/Controllers/TranscriptionController.php:1928
+
+------------------------------------------------------------
+Low Severity Findings
+------------------------------------------------------------
+
+5) Unused parameter suggests incomplete refactor
+- Impact: Maintainer confusion; indicates partially-evolved logic.
+- Evidence:
+  - `extractCardRecords(string $fullText, array $ref, array $segBounds)` does not use `$segBounds`.
+    - /cardgraph/src/Controllers/TranscriptionController.php:1820
+
+------------------------------------------------------------
+What Is Working Today
+------------------------------------------------------------
+
+Programmatic Pipeline (implemented):
+- Transcript segments -> merged text -> deterministic extraction -> parse runs + records persisted.
+- Key entry points:
+  - /cardgraph/src/Controllers/TranscriptionController.php:1119
+  - /cardgraph/src/Controllers/TranscriptionController.php:1196
+  - /cardgraph/src/Controllers/TranscriptionController.php:1206
+  - /cardgraph/src/Controllers/TranscriptionController.php:1291
+
+AI Parse Pipeline (not implemented in current repo):
+- No LLM provider adapter
+- No provider selection + key management model in DB
+- No Gemini/Grok HTTP client path in parser flow
+
+------------------------------------------------------------
+Push In The Right Direction (Gemini)
+------------------------------------------------------------
+
+Recommended implementation order:
+
+1) Add AI parser config storage (DB migration)
+- Create `CG_AiParseConfig` with:
+  - provider (`programmatic|gemini|grok`)
+  - gemini_api_key (encrypted/at least masked in UI)
+  - grok_api_key (same)
+  - model_name
+  - temperature
+  - max_output_tokens
+  - enabled flag
+  - updated_by/updated_at
+
+2) Add provider abstraction in backend
+- Introduce `parseWithProvider($provider, $fullText, $refData)` called from `parseSession`.
+- Keep current deterministic parser as fallback/default.
+
+3) Implement Gemini adapter first
+- Use server-side HTTP call with:
+  - strict JSON schema output contract
+  - timeout + retry with exponential backoff for 429/5xx
+  - parse/validate JSON before DB insert
+- If Gemini fails, fail run with actionable error or fallback to deterministic mode (decide explicitly).
+
+4) Add minimal admin UI controls
+- Provider selector + per-provider masked key fields
+- "Test Connection" action for Gemini/Grok
+- Model dropdown/text input
+
+5) Add logging and observability
+- Store provider, model, latency, token counts (if returned), HTTP status, retry count.
+- Persist error body snippets safely for debugging (truncate/redact keys).
+
+6) Add integration tests for parser contract
+- Given transcript input, assert:
+  - JSON contract validity
+  - insert succeeds
+  - parse run status transitions correctly
+  - fallback behavior (if enabled)
+
+------------------------------------------------------------
+Immediate Practical Note
+------------------------------------------------------------
+
+Given this repo state, Gemini failures are currently not from a bad Gemini implementation; they are from absence of an integrated Gemini pipeline in the active parse path.
+
