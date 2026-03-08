@@ -1,0 +1,23 @@
+For ease of use, I would like to move the scheduling functionality into the primary left-side navigation. Specifically, I’d like to add a “Scheduled Sessions” tab in the main left menu that provides direct access from the main page to the transcription audio workflow.
+
+The goal is to create a cleaner and more user-friendly experience. I don’t want to duplicate functionality unnecessarily, but I would like to introduce a streamlined section dedicated to setting up scheduled sessions. This new view would not require the full environmental checks currently present in the system. Those checks should remain where they currently exist within the transcription and audio workflow. Instead, this new tab should act as a simplified, user-facing entry point that allows users to easily engage with scheduling and session status.
+
+Importantly, the current Transcription Audio tab should remain unchanged for now. We should leave that interface exactly as it exists today. The new Scheduled Sessions tab will essentially act as a reproduction or simplified presentation of the current functionality, giving users easier access to key actions without navigating through the Maintenance section. In the future, we may choose to modify or evolve this structure, but for now the existing tab should remain intact.
+
+Within the new Scheduled Sessions tab, the interface should display sessions in a similar way to how they are shown today, but with status indicators next to the session controls. These indicators should show whether key steps—such as parsing or alignment to line items—have been completed. For example, simple color-based indicators (such as green for complete and red for incomplete) could be used. These indicators should be informational only and should not trigger actions within this tab. Their purpose is simply to provide users with a quick visual understanding of the session’s progress.
+
+This tab is intended to surface functionality that is currently buried within the Maintenance area, which users often find confusing. By moving this into the primary navigation, we can make the workflow more intuitive and encourage users to engage with the process more naturally. The design should remain clean, minimal, and user-focused, avoiding unnecessary technical details or distractions.
+
+Additionally, once a session has progressed through parsing and alignment, it should effectively be considered complete from the user’s perspective. When that happens, the relevant controls should become disabled or grayed out to prevent accidental edits or deletion. There should also be a clear “all steps complete” indicator so users can easily see that the process has finished.
+
+Users should not have the ability to delete or modify completed sessions from this page. Any attributes related to deletion or modification should be disabled or removed from this interface. At this stage, the user should simply see that the workflow has been completed and leave it as is.
+
+While the transcription audio workflow itself will remain unchanged, there may still be a need for an administrative override capability, but that should be handled carefully and kept separate from the standard user interface.
+
+Separately, I would also like to revisit the card layout within the existing Transcription Audio tab. Currently, the cards occupy too much screen space, which forces users to scroll down before they can see all available sessions. The cards should be reduced in size to better utilize the available screen real estate while still remaining easy to read and interact with.
+
+Ideally, the layout could support multiple cards across the screen—potentially three per row—rather than the current larger format. Some of the text could flow horizontally rather than vertically to help compress the design while keeping it usable. The goal is not to remove information but to create a more efficient, compact layout that allows users to quickly scan sessions without excessive scrolling.
+
+Overall, the objective is to surface key functionality, simplify user engagement, and improve visual efficiency, while leaving the underlying workflows intact for now.
+
+I’d also welcome any suggestions for improving usability, workflow visibility, or status indicators to ensure the experience remains intuitive and clean for users.

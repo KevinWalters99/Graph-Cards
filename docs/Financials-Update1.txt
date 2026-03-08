@@ -1,0 +1,42 @@
+### Complete this task FIRST
+We need to add the ability to import a CSV file into the General Cost section. The CSV should support three primary fields: Date, Description, and Amount.
+
+During the import process, each entry should be treated as a single line item with a default quantity of 1. For now, all records will be imported as lump-sum entries, meaning the amount provided in the CSV represents the full cost of that item.
+
+The system should support bulk importing, allowing multiple records to be uploaded and created at once from the CSV file. This will make it easier to add larger sets of general cost entries without manually entering each one.
+
+This initial implementation only needs to support basic CSV ingestion with those three fields, with the quantity automatically set to 1 for each imported record.
+
+### Complete this task SECOND
+
+Within the Financial Summary section, I would like to maintain a dedicated tab that explains the composition of the summary overview. This tab should clearly document the source of each column and metric used in the reporting, providing transparency into where the data originates and how the summary totals are calculated. The goal is to preserve traceability and make it easy to understand how each figure in the financial summary is derived.
+
+In addition to maintaining this reference tab, I would like to introduce a new tab called “Monthly Overview.” This tab will provide a more detailed breakdown of the monthly financial summaries by showing the subcomponents that contribute to each month’s total.
+
+The Monthly Overview should display the monthly totals along with supporting sub-line items, such as:
+
+General expenses
+
+Income sources (such as Whatnot payouts)
+
+PayPal-related costs or transaction fees
+
+Other operational or miscellaneous expenses within the selected date range
+
+Each month should include three primary sub-line items that roll up into the overall monthly total, allowing users to see both the summary value and the supporting breakdown that contributes to it. This provides a clearer view of how each month’s financial performance is constructed.
+
+It is also important that this view maintains traceability back to the original sources, particularly for platforms like Whatnot. For example, payouts from Whatnot represent money entering the account, while PayPal transactions typically represent money leaving the account. Both of these flows should be clearly represented and traceable within the reporting structure.
+
+Additionally, certain operational costs—such as giveaways or promotional expenses—should also be captured and reflected within the monthly breakdown so that all relevant financial activity contributing to that time period is accounted for.
+
+From a usability standpoint, it would also be beneficial for these detail levels to be collapsible. Ideally, the structure should allow users to expand or collapse financial views across multiple levels, eventually supporting rollups at the monthly, quarterly, and yearly levels, all of which should reconcile back to the totals shown in the Summary Overview.
+
+For now, however, the Summary Overview should remain unchanged. The initial focus should be on building out the Monthly Overview tab and its drill-down capabilities. Once this structure is established and validated, we can later revisit the Summary Overview and ensure it aligns cleanly with the same underlying data so that the two views remain consistent and comparable.
+
+The Monthly Overview should ultimately support hierarchical drill-down and collapsibility, allowing users to expand from a yearly view into quarterly summaries and then further into monthly and detailed components. The intent is that the monthly view will provide the primary drill-down capability, while higher-level views summarize that same information.
+
+In the long term, the interface should allow previous years to be collapsed by default, while the current year remains expanded so users can immediately see the most relevant financial details. Users should be able to expand past years as needed to review historical information.
+
+For the initial implementation, however, all periods should remain fully expanded so we can validate the structure and ensure the totals reconcile correctly. Once the layout and calculations are confirmed, we can introduce default behaviors such as automatically collapsing previous years.
+
+Overall, the objective is to create a transparent, traceable, and navigable financial reporting structure that allows users to see high-level summaries while still having the ability to drill down into the detailed components that make up each reporting period.

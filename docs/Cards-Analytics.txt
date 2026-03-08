@@ -1,0 +1,33 @@
+I’d like to make a few adjustments to the left-side navigation and analytics structure.
+
+First, the Top Buyers section is really more of an analytics feature, so it should be moved under the Analytics category in the left navigation. To visually reinforce that relationship, I would also like it to be slightly indented to the right, indicating that it is a sub-item within the Analytics section.
+
+In addition to Top Buyers, I would like to introduce a new analytics view called Cards. This section will focus on collecting and analyzing data about the cards themselves.
+
+The Cards analytics tab should also appear under the Analytics section and be indented in the same way as Top Buyers, making it clear that both are part of the analytics grouping.
+
+Within the Cards tab, I want to analyze cards across several attributes, similar to how we review buyer activity in the Top Buyers section. The goal is to be able to review and measure card-related performance across different dimensions, such as:
+
+Player (which players appear most often in auctions)
+
+Team
+
+Card attributes or types (e.g., special cards, variations, etc.)
+
+Auction frequency for each card or attribute
+
+Which cards generate the most total revenue
+
+Which cards sell the most frequently
+
+Which players bring in the most revenue
+
+Which players appear most frequently in auctions
+
+Which teams are sold most often
+
+This tab should function as an analytics dashboard for card performance, allowing us to review these attributes in a structured way.
+
+Additionally, the data in this section should support sorting and filtering by these attributes so that we can easily analyze patterns—for example, identifying which players generate the most revenue, which card types sell the most often, or which teams appear most frequently.
+
+Overall, the goal is to build out a card-focused analytics area that complements the existing Top Buyers analytics, while keeping both clearly organized under the Analytics section of the navigation.

@@ -1,0 +1,25 @@
+We have some alignment issues that need to be addressed, and I would like to begin planning for an additional alignment feature.
+
+Going forward, the AI should recognize explicit references to the current auction number as another alignment signal. In some cases, the person running the auction will clearly state which auction number is actively happening, such as: “Now we’re doing auction number 25” or “This is auction number 50.” When that occurs, the stated auction number should be treated as an additional anchor point for alignment.
+
+At present, we already use items such as the price and the date stamp as anchor points. The current auction number, when clearly and directly stated, should now be added as another valid anchor to improve alignment accuracy.
+
+It is important, however, that we apply this carefully. We should only capture the auction number when it is explicitly clear that the speaker is referring to the auction currently in progress. We should not use auction numbers mentioned in a future-looking or preview context, such as references to an upcoming auction number or statements about what will happen later. For example, if the speaker says something like “On auction number 25, we’ll do this later,” that should not be treated as an anchor for the current item.
+
+The AI needs to distinguish between:
+
+A currently active auction number, which should be used as an anchor
+
+A future or upcoming auction number, which should be ignored for alignment purposes
+
+This distinction is especially important because milestone auction numbers often involve specialized cards or notable items, which tend to be called out clearly and can serve as strong anchor points when they refer to the live auction in progress.
+
+In summary, the alignment process should consider:
+
+Price as an anchor point
+
+Date stamp as an anchor point
+
+Explicitly stated current auction number as an additional anchor point
+
+We need to make sure this becomes a defined part of what the AI is checking for in future auction transcripts, with the added rule that the auction number must refer to the current live auction, not a future or hypothetical one.
