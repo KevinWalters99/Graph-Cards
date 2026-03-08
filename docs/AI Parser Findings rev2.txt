@@ -1,0 +1,63 @@
+AI Parser Findings - Rev2 (Evidence-Based)
+Date: 2026-03-07
+Purpose: Address claim that prior findings were stale.
+
+Baseline
+- Prior file: `docs/AI Parser Findings.txt`
+- This rev2 adds command-level evidence from the current local workspace.
+
+Workspace Evidence Snapshot
+1) Current commit hash queried:
+   - Command: `git rev-parse HEAD`
+   - Result: `e7fe861ce7df49886db3d47e0aa96e072a8f8cad`
+
+2) Runtime code search for AI provider wiring:
+   - Command:
+     `rg -n "gemini|groq|grok|xai|google.*api|generative|genai|CG_AiParseConfig|provider" cardgraph/src cardgraph/public cardgraph/sql -S`
+   - Result:
+     `NO_MATCHES_IN_RUNTIME_CODE`
+   - Interpretation:
+     In this checked code, no Gemini/Groq/Grok provider integration exists in runtime parser codepaths.
+
+3) Actual parse route wiring:
+   - `/cardgraph/public/index.php:143`
+     `POST /api/transcription/sessions/{id}/parse -> TranscriptionController::parseSession`
+
+4) Actual parse engine call inside controller:
+   - `/cardgraph/src/Controllers/TranscriptionController.php:1196`
+     `$records = $this->extractCardRecords($fullText, $refData, $segmentBoundaries);`
+
+5) Actual extraction implementation:
+   - `/cardgraph/src/Controllers/TranscriptionController.php:1820`
+     `private function extractCardRecords(...)`
+   - This method is rule-based (name matching, regex flags, deterministic scoring) and contains no outbound LLM API call logic.
+
+6) UI action wiring:
+   - `/cardgraph/public/js/table-transcription.js:522`
+     `API.post('/api/transcription/sessions/' + this.selectedSessionId + '/parse')`
+   - This calls the same deterministic backend parse route above.
+
+About The Current Blocker You Reported
+- Your blocker statement is valid:
+  - Groq free-tier daily tokens exhausted.
+  - Gemini keys showing effective limit `0`.
+- But that is a provider/quota problem, not the only blocker in this repo state.
+- In this repo, the active parse path does not yet invoke Gemini/Groq at all.
+
+So both can be true simultaneously:
+1) External provider quota/account setup is blocked.
+2) Current checked code path still needs provider integration wiring.
+
+Reconciliation With "Other Agent" Claim
+- If another agent sees working Gemini integration, that is likely:
+  1. A different branch/repo,
+  2. Uncommitted local files outside this workspace snapshot, or
+  3. A different service not present under `cardgraph/src` + `cardgraph/public` here.
+- Based on this workspace at commit `e7fe861ce7df49886db3d47e0aa96e072a8f8cad`, prior findings are not stale.
+
+Specific Next Action To Unblock
+1) Keep Programmatic pipeline as current fallback.
+2) Add AI provider abstraction into `parseSession`.
+3) Implement Gemini adapter + config storage.
+4) Once wired, test against account/project where Gemini quota is non-zero.
+
