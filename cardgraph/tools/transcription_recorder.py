@@ -112,9 +112,6 @@ def main():
             # Build ffmpeg command for single segment
             ffmpeg_cmd = [
                 'ffmpeg', '-y',
-                '-nostdin',
-                '-hide_banner',
-                '-loglevel', 'error',
                 '-i', stream_url,
                 '-t', str(segment_seconds),
                 '-ar', str(sample_rate),
@@ -134,9 +131,8 @@ def main():
             try:
                 ffmpeg_proc = subprocess.Popen(
                     ffmpeg_cmd,
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
                 )
             except Exception as e:
                 log_event(db, session_id, 'error', 'ffmpeg_launch_error', f"Failed to launch ffmpeg: {e}")
@@ -206,42 +202,29 @@ def main():
 
                 seg_duration = int(time.time() - seg_start)
                 seg_size = os.path.getsize(seg_path) if os.path.exists(seg_path) else 0
-                ffmpeg_rc = ffmpeg_proc.returncode
 
-                if ffmpeg_rc == 0 and seg_size > 0:
-                    with db.cursor() as cur:
-                        cur.execute(
-                            "UPDATE CG_TranscriptionSegments SET "
-                            "recording_status = 'complete', duration_seconds = %s, "
-                            "file_size_bytes = %s, completed_at = NOW() "
-                            "WHERE segment_id = %s",
-                            (seg_duration, seg_size, segment_id)
-                        )
+                # Update segment record as complete
+                with db.cursor() as cur:
+                    cur.execute(
+                        "UPDATE CG_TranscriptionSegments SET "
+                        "recording_status = 'complete', duration_seconds = %s, "
+                        "file_size_bytes = %s, completed_at = NOW() "
+                        "WHERE segment_id = %s",
+                        (seg_duration, seg_size, segment_id)
+                    )
 
-                    log_event(db, session_id, 'info', 'segment_complete',
-                              f"Segment {segment_number} complete: {seg_duration}s, {seg_size} bytes")
+                log_event(db, session_id, 'info', 'segment_complete',
+                          f"Segment {segment_number} complete: {seg_duration}s, {seg_size} bytes")
 
-                    with db.cursor() as cur:
-                        cur.execute(
-                            "UPDATE CG_TranscriptionSessions SET total_segments = %s WHERE session_id = %s",
-                            (segment_number, session_id)
-                        )
-                else:
-                    error_msg = f"ffmpeg exited with code {ffmpeg_rc}, size={seg_size}"
-                    with db.cursor() as cur:
-                        cur.execute(
-                            "UPDATE CG_TranscriptionSegments SET "
-                            "recording_status = 'error', duration_seconds = %s, "
-                            "file_size_bytes = %s, error_message = %s, completed_at = NOW() "
-                            "WHERE segment_id = %s",
-                            (seg_duration, seg_size, error_msg[:500], segment_id)
-                        )
-
-                    log_event(db, session_id, 'warning', 'segment_failed',
-                              f"Segment {segment_number} failed: {error_msg}")
+                # Update session segment count
+                with db.cursor() as cur:
+                    cur.execute(
+                        "UPDATE CG_TranscriptionSessions SET total_segments = %s WHERE session_id = %s",
+                        (segment_number, session_id)
+                    )
 
                 # If segment was way shorter than expected, stream may have dropped
-                if seg_duration < segment_seconds * 0.5 and ffmpeg_rc != 0:
+                if seg_duration < segment_seconds * 0.5 and ffmpeg_proc.returncode != 0:
                     consecutive_failures += 1
                     if consecutive_failures >= MAX_CONNECT_RETRIES:
                         log_event(db, session_id, 'warning', 'stream_dropped',
