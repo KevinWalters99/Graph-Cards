@@ -7,6 +7,16 @@
 
 TOOLS_DIR="/volume1/web/cardgraph/tools"
 LOG="$TOOLS_DIR/scheduler.log"
+DOCKER_BIN="$(command -v docker 2>/dev/null || true)"
+
+if [ -z "$DOCKER_BIN" ]; then
+    for CANDIDATE in /usr/local/bin/docker /usr/bin/docker; do
+        if [ -x "$CANDIDATE" ]; then
+            DOCKER_BIN="$CANDIDATE"
+            break
+        fi
+    done
+fi
 
 echo "=== $(date '+%Y-%m-%d %H:%M:%S') ===" >> "$LOG"
 
@@ -84,8 +94,13 @@ if [ -f "$BUILD_REQ" ] && [ ! -f "$BUILD_LOCK" ]; then
     rm -f "$BUILD_REQ"
     echo "Docker build starting at $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG"
     touch "$BUILD_LOCK"
-    docker build -t cg-browser-recorder:latest "$DOCKER_DIR" > "$BUILD_LOG" 2>&1
-    BUILD_EXIT=$?
+    if [ -z "$DOCKER_BIN" ]; then
+        echo "ERROR: docker binary not found in PATH, /usr/local/bin/docker, or /usr/bin/docker" > "$BUILD_LOG"
+        BUILD_EXIT=127
+    else
+        "$DOCKER_BIN" build -t cg-browser-recorder:latest "$DOCKER_DIR" > "$BUILD_LOG" 2>&1
+        BUILD_EXIT=$?
+    fi
     echo "EXIT_CODE=$BUILD_EXIT" >> "$BUILD_LOG"
     rm -f "$BUILD_LOCK"
     if [ $BUILD_EXIT -eq 0 ]; then

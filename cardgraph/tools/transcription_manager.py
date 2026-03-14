@@ -10,6 +10,7 @@ Usage:
 import argparse
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -159,14 +160,27 @@ def find_python():
     return 'python3'
 
 
-def launch_docker_recorder(session_id, session_dir, config):
+def find_docker():
+    """Resolve docker for cron/root environments with a minimal PATH."""
+    docker_bin = shutil.which('docker')
+    if docker_bin:
+        return docker_bin
+
+    for path in ('/usr/local/bin/docker', '/usr/bin/docker'):
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+
+    raise RuntimeError('docker binary not found in PATH, /usr/local/bin/docker, or /usr/bin/docker')
+
+
+def launch_docker_recorder(session_id, session_dir, config, log_handle, docker_bin):
     """Launch the browser automation recorder in a Docker container."""
     container_name = f"cg_tx_recorder_{session_id}"
     audio_dir = os.path.join(session_dir, 'audio')
     config_json = json.dumps(config)
 
     docker_cmd = [
-        'docker', 'run',
+        docker_bin, 'run',
         '--rm',
         '--name', container_name,
         '--network', 'host',
@@ -178,22 +192,34 @@ def launch_docker_recorder(session_id, session_dir, config):
         '--config', config_json,
     ]
 
-    proc = subprocess.Popen(docker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.Popen(docker_cmd, stdout=log_handle, stderr=subprocess.STDOUT)
     return proc
 
 
-def stop_docker_container(session_id):
+def stop_docker_container(session_id, docker_bin):
     """Stop the Docker container for this session (if running)."""
     container_name = f"cg_tx_recorder_{session_id}"
     try:
-        subprocess.run(['docker', 'stop', '-t', '10', container_name],
+        subprocess.run([docker_bin, 'stop', '-t', '10', container_name],
                        capture_output=True, timeout=20)
     except Exception:
         try:
-            subprocess.run(['docker', 'kill', container_name],
+            subprocess.run([docker_bin, 'kill', container_name],
                            capture_output=True, timeout=10)
         except Exception:
             pass
+
+
+def read_log_tail(path, max_chars=2000):
+    """Read the tail of a log file for diagnostics."""
+    try:
+        with open(path, 'rb') as fh:
+            fh.seek(0, os.SEEK_END)
+            size = fh.tell()
+            fh.seek(max(0, size - max_chars))
+            return fh.read().decode('utf-8', errors='replace')
+    except Exception:
+        return ''
 
 
 def main():
@@ -205,6 +231,12 @@ def main():
     db = get_db()
     recorder_proc = None
     worker_proc = None
+    recorder_log = None
+    worker_log = None
+    recorder_log_path = None
+    worker_log_path = None
+    acquisition_mode = None
+    docker_bin = None
 
     try:
         session, config = load_config(db, session_id)
@@ -215,6 +247,11 @@ def main():
         update_session(db, session_id, session_dir=session_dir)
         log_event(db, session_id, 'info', 'dir_created', f"Session directory: {session_dir}")
 
+        recorder_log_path = os.path.join(session_dir, 'recorder.log')
+        worker_log_path = os.path.join(session_dir, 'worker.log')
+        recorder_log = open(recorder_log_path, 'ab')
+        worker_log = open(worker_log_path, 'ab')
+
         python_bin = find_python()
         config_json = json.dumps(config)
 
@@ -224,12 +261,14 @@ def main():
         tx_cores = '0' if total_cores == 1 else str(total_cores - 1)
 
         acquisition_mode = config['acquisition_mode']
+        if acquisition_mode == 'browser_automation':
+            docker_bin = find_docker()
 
         # Launch recorder (Docker for browser_automation, direct subprocess otherwise)
         if acquisition_mode == 'browser_automation':
             log_event(db, session_id, 'info', 'recorder_launching',
                       'Launching browser automation recorder (Docker)')
-            recorder_proc = launch_docker_recorder(session_id, session_dir, config)
+            recorder_proc = launch_docker_recorder(session_id, session_dir, config, recorder_log, docker_bin)
         else:
             rec_script = os.path.join(TOOLS_DIR, 'transcription_recorder.py')
             rec_cmd = [python_bin, rec_script,
@@ -245,7 +284,7 @@ def main():
                 pass
 
             log_event(db, session_id, 'info', 'recorder_launching', 'Launching audio recorder')
-            recorder_proc = subprocess.Popen(rec_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            recorder_proc = subprocess.Popen(rec_cmd, stdout=recorder_log, stderr=subprocess.STDOUT)
 
         # Launch transcription worker
         tx_script = os.path.join(TOOLS_DIR, 'transcription_worker.py')
@@ -268,7 +307,7 @@ def main():
             pass
 
         log_event(db, session_id, 'info', 'worker_launching', 'Launching transcription worker')
-        worker_proc = subprocess.Popen(tx_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        worker_proc = subprocess.Popen(tx_cmd, stdout=worker_log, stderr=subprocess.STDOUT)
 
         # ── Monitor loop ──
         max_seconds = int(config['max_session_hours']) * 3600
@@ -282,7 +321,7 @@ def main():
             if check_signal(session_id, 'cancel'):
                 log_event(db, session_id, 'warning', 'cancel_received', 'Cancel signal received')
                 if acquisition_mode == 'browser_automation':
-                    stop_docker_container(session_id)
+                    stop_docker_container(session_id, docker_bin)
                 if recorder_proc and recorder_proc.poll() is None:
                     recorder_proc.terminate()
                 if worker_proc and worker_proc.poll() is None:
@@ -296,7 +335,7 @@ def main():
             if check_signal(session_id, 'stop'):
                 log_event(db, session_id, 'info', 'stop_received', 'Stop signal received — stopping recorder')
                 if acquisition_mode == 'browser_automation':
-                    stop_docker_container(session_id)
+                    stop_docker_container(session_id, docker_bin)
                 if recorder_proc and recorder_proc.poll() is None:
                     recorder_proc.terminate()
                 # Let transcription worker continue — it exits when no more pending segments
@@ -314,7 +353,7 @@ def main():
             if elapsed >= max_seconds:
                 log_event(db, session_id, 'warning', 'max_duration', f"Max duration reached ({config['max_session_hours']}h)")
                 if acquisition_mode == 'browser_automation':
-                    stop_docker_container(session_id)
+                    stop_docker_container(session_id, docker_bin)
                 if recorder_proc and recorder_proc.poll() is None:
                     recorder_proc.terminate()
                 update_session(db, session_id, status='processing')
@@ -330,11 +369,10 @@ def main():
                 exit_code = recorder_proc.returncode
                 # Capture recorder output for diagnostics
                 rec_output = ''
-                if recorder_proc.stdout:
-                    try:
-                        rec_output = recorder_proc.stdout.read().decode('utf-8', errors='replace')[-2000:]
-                    except Exception:
-                        pass
+                if recorder_log:
+                    recorder_log.flush()
+                if recorder_log_path:
+                    rec_output = read_log_tail(recorder_log_path)
                 if exit_code == 0:
                     log_event(db, session_id, 'info', 'recorder_exited', 'Recorder finished normally')
                 else:
@@ -398,8 +436,8 @@ def main():
             print(f"FATAL: {e}")
 
         # Kill subprocesses on error
-        if acquisition_mode == 'browser_automation':
-            stop_docker_container(session_id)
+        if acquisition_mode == 'browser_automation' and docker_bin:
+            stop_docker_container(session_id, docker_bin)
         for proc in [recorder_proc, worker_proc]:
             if proc and proc.poll() is None:
                 proc.terminate()
@@ -407,6 +445,12 @@ def main():
     finally:
         clean_signals(session_id)
         clean_lock(session_id)
+        for handle in (recorder_log, worker_log):
+            if handle:
+                try:
+                    handle.close()
+                except Exception:
+                    pass
         try:
             db.close()
         except Exception:
