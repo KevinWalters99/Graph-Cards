@@ -46,9 +46,9 @@ var Alerts = {
                 html.push(
                     '<div class="alert-item alert-type-' + a.alert_type + '">' +
                     icon +
-                    '<span class="alert-title">' + Alerts.escHtml(a.title) + '</span>' +
+                    '<span class="alert-title">' + App.escHtml(a.title) + '</span>' +
                     dismiss +
-                    '<div class="alert-tooltip">' + Alerts.escHtml(a.description) + '</div>' +
+                    '<div class="alert-tooltip">' + App.escHtml(a.description) + '</div>' +
                     '</div>'
                 );
             }
@@ -107,15 +107,15 @@ var Alerts = {
                     }
                     itemsHtml += Alerts.tickerTeamChip(item.home);
                     if (item.status) {
-                        itemsHtml += '<span class="ticker-game-status">' + Alerts.escHtml(item.status) + '</span>';
+                        itemsHtml += '<span class="ticker-game-status">' + App.escHtml(item.status) + '</span>';
                     }
                     itemsHtml += '</span>';
                 } else {
                     // Standard label: value format
                     var logoHtml = item.logoUrl ? '<img class="ticker-logo" src="' + item.logoUrl + '" alt="">' : '';
                     itemsHtml += '<span class="ticker-item">' + logoHtml +
-                        '<span class="ticker-label">' + Alerts.escHtml(item.label) + ':</span>' +
-                        '<span class="ticker-value">' + Alerts.escHtml(item.value) + '</span>' +
+                        '<span class="ticker-label">' + App.escHtml(item.label) + ':</span>' +
+                        '<span class="ticker-value">' + App.escHtml(item.value) + '</span>' +
                         '</span>';
                 }
                 if (i < result.items.length - 1) {
@@ -143,19 +143,12 @@ var Alerts = {
         if (team.logoUrl) {
             h += '<img class="ticker-logo" src="' + team.logoUrl + '" alt="">';
         }
-        h += '<span class="ticker-abbr">' + Alerts.escHtml(team.abbr) + '</span>';
+        h += '<span class="ticker-abbr">' + App.escHtml(team.abbr) + '</span>';
         if (team.score !== null && team.score !== undefined) {
             h += '<span class="ticker-score">' + team.score + '</span>';
         }
         h += '</span>';
         return h;
-    },
-
-    escHtml: function(str) {
-        if (!str) return '';
-        var div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
     }
 };
 
@@ -352,13 +345,13 @@ var AlertsAdmin = {
         // Title
         p.push('<div class="form-group">');
         p.push('<label>Title *</label>');
-        p.push('<input type="text" id="alert-title" value="' + (existing ? Alerts.escHtml(existing.title) : '') + '" placeholder="e.g., Perform Auction Uploads">');
+        p.push('<input type="text" id="alert-title" value="' + (existing ? App.escHtml(existing.title) : '') + '" placeholder="e.g., Perform Auction Uploads">');
         p.push('</div>');
 
         // Description
         p.push('<div class="form-group">');
         p.push('<label>Description *</label>');
-        p.push('<textarea id="alert-description" rows="3" placeholder="Guidance shown in tooltip...">' + (existing ? Alerts.escHtml(existing.description) : '') + '</textarea>');
+        p.push('<textarea id="alert-description" rows="3" placeholder="Guidance shown in tooltip...">' + (existing ? App.escHtml(existing.description) : '') + '</textarea>');
         p.push('</div>');
 
         // Type + Frequency row

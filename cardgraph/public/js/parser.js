@@ -506,7 +506,7 @@ var ParserAdmin = {
                 for (var j = 0; j < f.options.length; j++) {
                     var opt = f.options[j];
                     var sel = f.value === opt ? ' selected' : '';
-                    html += '<option value="' + this.escHtml(opt) + '"' + sel + '>' + this.escHtml(opt) + '</option>';
+                    html += '<option value="' + App.escHtml(opt) + '"' + sel + '>' + App.escHtml(opt) + '</option>';
                 }
                 html += '</select>';
             }
@@ -641,7 +641,7 @@ var ParserAdmin = {
         var html = '<option value="">All Teams</option>';
         for (var j = 0; j < teamList.length; j++) {
             var sel = self._playerFilters.team === teamList[j] ? ' selected' : '';
-            html += '<option value="' + self.escHtml(teamList[j]) + '"' + sel + '>' + self.escHtml(teamList[j]) + '</option>';
+            html += '<option value="' + App.escHtml(teamList[j]) + '"' + sel + '>' + App.escHtml(teamList[j]) + '</option>';
         }
         teamSelect.innerHTML = html;
 
@@ -692,13 +692,13 @@ var ParserAdmin = {
                         var logo = row.team_mlb_id
                             ? '<img class="parser-team-logo" src="/img/teams/' + row.team_mlb_id + '.png" alt="">'
                             : '';
-                        return logo + '<span title="' + self.escHtml(row.team_name || '') + '">' + self.escHtml(row.team_abbreviation) + '</span>';
+                        return logo + '<span title="' + App.escHtml(row.team_name || '') + '">' + App.escHtml(row.team_abbreviation) + '</span>';
                     }
                 },
                 {
                     key: 'minor_league_level', label: 'Level',
                     render: function(row) {
-                        if (row.minor_league_level) return '<span class="parser-tag">' + self.escHtml(row.minor_league_level) + '</span>';
+                        if (row.minor_league_level) return '<span class="parser-tag">' + App.escHtml(row.minor_league_level) + '</span>';
                         return row.current_team_id ? 'MLB' : '<span class="text-muted">-</span>';
                     }
                 },
@@ -728,7 +728,7 @@ var ParserAdmin = {
                             if (row.draft_status === 'Intl FA') cls += ' draft-intl';
                             else if (row.draft_status === 'Pre-Draft') cls += ' draft-pre';
                             else if (row.draft_status === 'Undrafted') cls += ' draft-undrafted';
-                            return '<span class="' + cls + '">' + self.escHtml(row.draft_status) + '</span>';
+                            return '<span class="' + cls + '">' + App.escHtml(row.draft_status) + '</span>';
                         }
                         return '<span class="text-muted">-</span>';
                     }
@@ -747,7 +747,7 @@ var ParserAdmin = {
                         if (!row.nicknames || row.nicknames.length === 0) return '<span class="text-muted">-</span>';
                         var tags = [];
                         for (var i = 0; i < row.nicknames.length; i++) {
-                            tags.push('<span class="parser-tag">' + self.escHtml(row.nicknames[i].nickname) + '</span>');
+                            tags.push('<span class="parser-tag">' + App.escHtml(row.nicknames[i].nickname) + '</span>');
                         }
                         return tags.join(' ');
                     }
@@ -860,16 +860,16 @@ var ParserAdmin = {
         var self = this;
         var p = [];
         p.push('<div class="modal-header">');
-        p.push('<h2>Stats: ' + self.escHtml(player.first_name) + ' ' + self.escHtml(player.last_name) + '</h2>');
+        p.push('<h2>Stats: ' + App.escHtml(player.first_name) + ' ' + App.escHtml(player.last_name) + '</h2>');
         p.push('<button class="modal-close" onclick="App.closeModal()">&times;</button>');
         p.push('</div>');
         p.push('<div class="modal-body">');
 
         if (player.team_abbreviation) {
-            p.push('<p><strong>Team:</strong> ' + self.escHtml(player.team_name) + ' (' + self.escHtml(player.team_abbreviation) + ')</p>');
+            p.push('<p><strong>Team:</strong> ' + App.escHtml(player.team_name) + ' (' + App.escHtml(player.team_abbreviation) + ')</p>');
         }
         if (player.primary_position) {
-            p.push('<p><strong>Position:</strong> ' + self.escHtml(player.primary_position) + '</p>');
+            p.push('<p><strong>Position:</strong> ' + App.escHtml(player.primary_position) + '</p>');
         }
 
         var sections = [
@@ -931,10 +931,10 @@ var ParserAdmin = {
 
         p.push('<div class="form-row">');
         p.push('<div class="form-group"><label>First Name *</label>');
-        p.push('<input type="text" id="player-first-name" value="' + (existing ? self.escHtml(existing.first_name) : '') + '">');
+        p.push('<input type="text" id="player-first-name" value="' + (existing ? App.escHtml(existing.first_name) : '') + '">');
         p.push('</div>');
         p.push('<div class="form-group"><label>Last Name *</label>');
-        p.push('<input type="text" id="player-last-name" value="' + (existing ? self.escHtml(existing.last_name) : '') + '">');
+        p.push('<input type="text" id="player-last-name" value="' + (existing ? App.escHtml(existing.last_name) : '') + '">');
         p.push('</div>');
         p.push('</div>');
 
@@ -955,7 +955,7 @@ var ParserAdmin = {
                 var tm = self._teamsListCache[t];
                 var tSel = existing && existing.current_team_id == tm.team_id ? ' selected' : '';
                 p.push('<option value="' + tm.team_id + '"' + tSel + '>'
-                    + (tm.abbreviation || '') + ' - ' + self.escHtml(tm.team_name) + '</option>');
+                    + (tm.abbreviation || '') + ' - ' + App.escHtml(tm.team_name) + '</option>');
             }
         }
         p.push('</select></div>');
@@ -987,7 +987,7 @@ var ParserAdmin = {
         p.push('</div>');
         p.push('<div class="form-group"><label>Draft Round</label>');
         p.push('<input type="text" id="player-draft-round" maxlength="5" value="'
-            + (existing && existing.draft_round ? self.escHtml(existing.draft_round) : '') + '" placeholder="e.g. 1">');
+            + (existing && existing.draft_round ? App.escHtml(existing.draft_round) : '') + '" placeholder="e.g. 1">');
         p.push('</div>');
         p.push('<div class="form-group"><label>Draft Pick #</label>');
         p.push('<input type="number" id="player-draft-pick" min="1" value="'
@@ -1070,7 +1070,7 @@ var ParserAdmin = {
         var self = this;
         var p = [];
         p.push('<div class="modal-header">');
-        p.push('<h2>Nicknames: ' + self.escHtml(player.first_name) + ' ' + self.escHtml(player.last_name) + '</h2>');
+        p.push('<h2>Nicknames: ' + App.escHtml(player.first_name) + ' ' + App.escHtml(player.last_name) + '</h2>');
         p.push('<button class="modal-close" onclick="App.closeModal()">&times;</button>');
         p.push('</div>');
         p.push('<div class="modal-body">');
@@ -1080,7 +1080,7 @@ var ParserAdmin = {
             for (var j = 0; j < player.nicknames.length; j++) {
                 var nn = player.nicknames[j];
                 p.push('<div class="parser-child-row">');
-                p.push('<span class="parser-tag">' + self.escHtml(nn.nickname) + '</span>');
+                p.push('<span class="parser-tag">' + App.escHtml(nn.nickname) + '</span>');
                 p.push('<button class="btn btn-danger btn-sm btn-del-nn" data-nid="' + nn.nickname_id + '">Remove</button>');
                 p.push('</div>');
             }
@@ -1222,7 +1222,7 @@ var ParserAdmin = {
                         var logo = row.mlb_id
                             ? '<img class="parser-team-logo" src="/img/teams/' + row.mlb_id + '.png" alt="">'
                             : '';
-                        return logo + self.escHtml(row.abbreviation || '-');
+                        return logo + App.escHtml(row.abbreviation || '-');
                     }
                 },
                 { key: 'team_name', label: 'Team Name' },
@@ -1245,7 +1245,7 @@ var ParserAdmin = {
                         if (!row.aliases || row.aliases.length === 0) return '<span class="text-muted">-</span>';
                         var tags = [];
                         for (var i = 0; i < row.aliases.length; i++) {
-                            tags.push('<span class="parser-tag">' + self.escHtml(row.aliases[i].alias_name) + '</span>');
+                            tags.push('<span class="parser-tag">' + App.escHtml(row.aliases[i].alias_name) + '</span>');
                         }
                         return tags.join(' ');
                     }
@@ -1324,10 +1324,10 @@ var ParserAdmin = {
 
         p.push('<div class="form-row">');
         p.push('<div class="form-group"><label>Team Name *</label>');
-        p.push('<input type="text" id="team-name" value="' + (existing ? self.escHtml(existing.team_name) : '') + '">');
+        p.push('<input type="text" id="team-name" value="' + (existing ? App.escHtml(existing.team_name) : '') + '">');
         p.push('</div>');
         p.push('<div class="form-group"><label>City</label>');
-        p.push('<input type="text" id="team-city" value="' + (existing ? self.escHtml(existing.city || '') : '') + '">');
+        p.push('<input type="text" id="team-city" value="' + (existing ? App.escHtml(existing.city || '') : '') + '">');
         p.push('</div>');
         p.push('</div>');
 
@@ -1380,7 +1380,7 @@ var ParserAdmin = {
         var self = this;
         var p = [];
         p.push('<div class="modal-header">');
-        p.push('<h2>Aliases: ' + self.escHtml(team.team_name) + '</h2>');
+        p.push('<h2>Aliases: ' + App.escHtml(team.team_name) + '</h2>');
         p.push('<button class="modal-close" onclick="App.closeModal()">&times;</button>');
         p.push('</div>');
         p.push('<div class="modal-body">');
@@ -1390,7 +1390,7 @@ var ParserAdmin = {
             for (var j = 0; j < team.aliases.length; j++) {
                 var al = team.aliases[j];
                 p.push('<div class="parser-child-row">');
-                p.push('<span class="parser-tag">' + self.escHtml(al.alias_name) + '</span>');
+                p.push('<span class="parser-tag">' + App.escHtml(al.alias_name) + '</span>');
                 p.push('<button class="btn btn-danger btn-sm btn-del-alias" data-aid="' + al.alias_id + '">Remove</button>');
                 p.push('</div>');
             }
@@ -1588,7 +1588,7 @@ var ParserAdmin = {
         p.push('</div>');
         p.push('<div class="modal-body">');
         p.push('<div class="form-group"><label>Name *</label>');
-        p.push('<input type="text" id="simple-name" value="' + self.escHtml(currentValue) + '">');
+        p.push('<input type="text" id="simple-name" value="' + App.escHtml(currentValue) + '">');
         p.push('</div>');
         if (isEdit) {
             p.push('<div class="form-group"><label>Active</label><select id="simple-active">');
@@ -1638,14 +1638,5 @@ var ParserAdmin = {
         if (type === 'makers') this.loadMakers();
         else if (type === 'styles') this.loadStyles();
         else if (type === 'specialties') this.loadSpecialties();
-    },
-
-    // ─── Utility ──────────────────────────────────────────────────
-
-    escHtml: function(str) {
-        if (!str) return '';
-        var div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
     }
 };

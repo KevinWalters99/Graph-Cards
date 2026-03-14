@@ -8,6 +8,28 @@
  */
 class TranscriptionController
 {
+    /**
+     * Validate the scheduler shared secret from the request.
+     * Reads key from secrets.php instead of hardcoding.
+     */
+    private function validateSchedulerKey(): void
+    {
+        // Check POST, GET, and JSON body for the key
+        $key = $_POST['key'] ?? $_GET['key'] ?? '';
+        if ($key === '') {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $body = json_decode($raw, true);
+                $key = $body['key'] ?? '';
+            }
+        }
+        $secrets = require __DIR__ . '/../../config/secrets.php';
+        $expectedKey = $secrets['scheduler']['key'] ?? '';
+        if ($expectedKey === '' || $key !== $expectedKey) {
+            jsonError('Forbidden', 403);
+        }
+    }
+
     // ─── Settings ─────────────────────────────────────────────────
 
     /**
@@ -855,22 +877,76 @@ class TranscriptionController
      */
     public function schedulerTick(array $params = []): void
     {
-        // Verify scheduler key (simple shared secret)
-        // Accept key from form data (curl -d) or JSON body
-        $key = $_POST['key'] ?? '';
-        if ($key === '') {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $body = json_decode($raw, true);
-                $key = $body['key'] ?? '';
-            }
-        }
-        if ($key !== 'cg_sched_2026') {
-            jsonError('Forbidden', 403);
-        }
+        $this->validateSchedulerKey();
 
         $pdo = cg_db();
+        $toolsDir = realpath(__DIR__ . '/../../tools');
 
+        // ── Orphan detection: recover sessions stuck after NAS restart ──
+        $orphanStmt = $pdo->prepare(
+            "SELECT session_id
+             FROM CG_TranscriptionSessions
+             WHERE status IN ('recording', 'processing')
+               AND updated_at < NOW() - INTERVAL 5 MINUTE"
+        );
+        $orphanStmt->execute();
+        $orphanedIds = [];
+
+        while ($row = $orphanStmt->fetch(PDO::FETCH_ASSOC)) {
+            $id = (int) $row['session_id'];
+            $lockFile = $toolsDir . '/transcription_session_' . $id . '.lock';
+
+            // If no lock file exists, the process is definitely dead
+            if (!file_exists($lockFile)) {
+                $pdo->prepare(
+                    "UPDATE CG_TranscriptionSessions
+                     SET status = 'error',
+                         stop_reason = 'orphaned_after_restart',
+                         end_time = NOW()
+                     WHERE session_id = :id AND status IN ('recording', 'processing')"
+                )->execute([':id' => $id]);
+
+                $this->insertLog($pdo, $id, 'error', 'orphan_detected',
+                    'Session orphaned — no lock file found. Likely caused by NAS restart.');
+                $orphanedIds[] = $id;
+                continue;
+            }
+
+            // Lock file exists — check if PID inside is still alive
+            $lockContent = @file_get_contents($lockFile);
+            if ($lockContent !== false) {
+                $lines = explode("\n", trim($lockContent));
+                $pid = (int) ($lines[0] ?? 0);
+
+                if ($pid > 0) {
+                    // Check if PID is running (posix_kill with signal 0)
+                    $isRunning = false;
+                    if (function_exists('posix_kill')) {
+                        $isRunning = posix_kill($pid, 0);
+                    } else {
+                        // Fallback: check /proc/<pid> (Linux/Synology)
+                        $isRunning = is_dir('/proc/' . $pid);
+                    }
+
+                    if (!$isRunning) {
+                        @unlink($lockFile);
+                        $pdo->prepare(
+                            "UPDATE CG_TranscriptionSessions
+                             SET status = 'error',
+                                 stop_reason = 'orphaned_after_restart',
+                                 end_time = NOW()
+                             WHERE session_id = :id AND status IN ('recording', 'processing')"
+                        )->execute([':id' => $id]);
+
+                        $this->insertLog($pdo, $id, 'error', 'orphan_detected',
+                            "Session orphaned — PID $pid no longer running. Likely caused by NAS restart.");
+                        $orphanedIds[] = $id;
+                    }
+                }
+            }
+        }
+
+        // ── Find scheduled sessions that are due ──
         $stmt = $pdo->prepare(
             "SELECT session_id, auction_name, scheduled_start, override_acquisition_mode
              FROM CG_TranscriptionSessions
@@ -880,11 +956,17 @@ class TranscriptionController
         $stmt->execute();
         $dueSessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if (empty($dueSessions)) {
+        if (empty($dueSessions) && empty($orphanedIds)) {
             jsonResponse(['message' => 'No sessions due', 'started' => 0]);
         }
+        if (empty($dueSessions)) {
+            jsonResponse([
+                'message' => 'No sessions due, orphaned sessions recovered',
+                'started' => 0,
+                'orphaned_recovered' => $orphanedIds
+            ]);
+        }
 
-        $toolsDir = realpath(__DIR__ . '/../../tools');
         $managerScript = $toolsDir . '/transcription_manager.py';
 
         if (!file_exists($managerScript)) {
@@ -949,7 +1031,11 @@ class TranscriptionController
             $started[] = $id;
         }
 
-        jsonResponse(['message' => 'Scheduler tick complete', 'started' => $started]);
+        $response = ['message' => 'Scheduler tick complete', 'started' => $started];
+        if (!empty($orphanedIds)) {
+            $response['orphaned_recovered'] = $orphanedIds;
+        }
+        jsonResponse($response);
     }
 
     // ─── Retention Cleanup ─────────────────────────────────────
@@ -961,17 +1047,7 @@ class TranscriptionController
      */
     public function cleanupExpired(array $params = []): void
     {
-        $key = $_POST['key'] ?? '';
-        if ($key === '') {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $body = json_decode($raw, true);
-                $key = $body['key'] ?? '';
-            }
-        }
-        if ($key !== 'cg_sched_2026') {
-            jsonError('Forbidden', 403);
-        }
+        $this->validateSchedulerKey();
 
         // Throttle: only run once per hour
         $toolsDir = realpath(__DIR__ . '/../../tools');
@@ -1037,17 +1113,7 @@ class TranscriptionController
      */
     public function dockerBuild(array $params = []): void
     {
-        $key = $_POST['key'] ?? '';
-        if ($key === '') {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $body = json_decode($raw, true);
-                $key = $body['key'] ?? '';
-            }
-        }
-        if ($key !== 'cg_sched_2026') {
-            jsonError('Forbidden', 403);
-        }
+        $this->validateSchedulerKey();
 
         $toolsDir = realpath(__DIR__ . '/../../tools');
         $dockerDir = $toolsDir . '/docker';
@@ -1074,10 +1140,7 @@ class TranscriptionController
      */
     public function dockerBuildStatus(array $params = []): void
     {
-        $key = $_GET['key'] ?? '';
-        if ($key !== 'cg_sched_2026') {
-            jsonError('Forbidden', 403);
-        }
+        $this->validateSchedulerKey();
 
         $toolsDir = realpath(__DIR__ . '/../../tools');
         $buildLog = $toolsDir . '/docker_build.log';

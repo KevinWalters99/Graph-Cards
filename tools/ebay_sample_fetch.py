@@ -10,8 +10,9 @@ import json
 
 IMAP_HOST = 'imap.mail.yahoo.com'
 IMAP_PORT = 993
-YAHOO_EMAIL = 'collinwalters123@yahoo.com'
-YAHOO_APP_PASSWORD = 'pjnpsukyleqttwoq'
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cardgraph', 'tools'))
+from cg_config import YAHOO_EMAIL, YAHOO_APP_PASSWORD
 
 class HTMLTextExtractor(HTMLParser):
     def __init__(self):

@@ -17,18 +17,10 @@ import sys
 import time
 from datetime import datetime
 
-# Ensure this script's directory is on the path (for bundled pymysql)
+# Ensure this script's directory is on the path (for bundled pymysql and cg_config)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pymysql
-
-DB_CONFIG = {
-    'host': '192.168.0.215',
-    'port': 3307,
-    'user': 'cg_app',
-    'password': 'ACe!sysD#0kVnBWF',
-    'database': 'card_graph',
-    'charset': 'utf8mb4',
-}
+from cg_config import DB_CONFIG
 
 TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -148,6 +140,16 @@ def clean_lock(session_id):
         os.remove(path)
 
 
+def write_heartbeat(session_id):
+    """Write PID + timestamp to lock file so the scheduler can detect stale processes."""
+    path = os.path.join(TOOLS_DIR, f"transcription_session_{session_id}.lock")
+    try:
+        with open(path, 'w') as f:
+            f.write(f"{os.getpid()}\n{int(time.time())}\n")
+    except Exception:
+        pass
+
+
 def find_python():
     """Find the python3/python binary."""
     for cmd in ['python3', 'python']:
@@ -185,6 +187,11 @@ def launch_docker_recorder(session_id, session_dir, config, log_handle, docker_b
         '--name', container_name,
         '--network', 'host',
         '--shm-size=512m',
+        '-e', f"CG_DB_HOST={DB_CONFIG['host']}",
+        '-e', f"CG_DB_PORT={DB_CONFIG['port']}",
+        '-e', f"CG_DB_USER={DB_CONFIG['user']}",
+        '-e', f"CG_DB_PASSWORD={DB_CONFIG['password']}",
+        '-e', f"CG_DB_NAME={DB_CONFIG['database']}",
         '-v', f'{audio_dir}:/output',
         '-v', f'{TOOLS_DIR}:/signals:ro',
         'cg-browser-recorder:latest',
@@ -240,6 +247,7 @@ def main():
 
     try:
         session, config = load_config(db, session_id)
+        write_heartbeat(session_id)
         log_event(db, session_id, 'info', 'manager_started', f"Manager started for session {session_id}")
 
         # Create session directory
@@ -389,8 +397,9 @@ def main():
                 log_event(db, session_id, 'info', 'session_complete', 'Session completed')
                 break
 
-            # Periodic segment count update (every 30s)
+            # Periodic heartbeat + segment count update (every 30s)
             if int(elapsed) % 30 == 0 and int(elapsed) > 0:
+                write_heartbeat(session_id)
                 try:
                     with db.cursor() as cur:
                         cur.execute(
@@ -478,6 +487,8 @@ def generate_master_transcript(session_dir, session):
 
         for seg_file in segments:
             filepath = os.path.join(tx_dir, seg_file)
+            if not os.path.exists(filepath):
+                continue
             out.write(f"\n--- {seg_file} ---\n\n")
             with open(filepath, 'r', encoding='utf-8') as inp:
                 out.write(inp.read())

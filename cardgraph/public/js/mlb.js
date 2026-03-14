@@ -171,7 +171,7 @@ var Mlb = {
             var gameCount = section.games.length;
 
             html.push('<div class="mlb-day-section">');
-            html.push('<h3 class="mlb-day-header">' + this.escHtml(sectionLabel));
+            html.push('<h3 class="mlb-day-header">' + App.escHtml(sectionLabel));
             html.push('&nbsp;&nbsp;<span class="mlb-game-count">' + gameCount + ' game' + (gameCount !== 1 ? 's' : '') + '</span>');
             html.push('</h3>');
 
@@ -198,7 +198,7 @@ var Mlb = {
 
         // Game type badge (Spring Training, Exhibition, etc.)
         if (game.gameType && game.gameType !== 'R') {
-            p.push('<div class="mlb-game-type">' + this.escHtml(game.gameTypeLabel) + '</div>');
+            p.push('<div class="mlb-game-type">' + App.escHtml(game.gameTypeLabel) + '</div>');
         }
 
         // Status badge
@@ -218,9 +218,9 @@ var Mlb = {
                 p.push('<span class="mlb-outs">' + game.outs + ' out' + (game.outs !== 1 ? 's' : '') + '</span>');
             }
         } else if (game.isFinal) {
-            p.push('<span class="mlb-status-text mlb-status-final">' + this.escHtml(game.status) + '</span>');
+            p.push('<span class="mlb-status-text mlb-status-final">' + App.escHtml(game.status) + '</span>');
         } else {
-            p.push('<span class="mlb-status-text mlb-status-scheduled">' + this.escHtml(game.startTime || game.status) + '</span>');
+            p.push('<span class="mlb-status-text mlb-status-scheduled">' + App.escHtml(game.startTime || game.status) + '</span>');
         }
         p.push('</div>');
 
@@ -239,7 +239,7 @@ var Mlb = {
             footerParts.push(game.venue);
         }
         if (footerParts.length > 0) {
-            p.push('<div class="mlb-game-footer">' + this.escHtml(footerParts.join(' | ')) + '</div>');
+            p.push('<div class="mlb-game-footer">' + App.escHtml(footerParts.join(' | ')) + '</div>');
         }
 
         p.push('</div>');
@@ -259,9 +259,9 @@ var Mlb = {
         }
 
         // Team name + record
-        p.push('<span class="mlb-team-name">' + this.escHtml(team.abbreviation || team.name) + '</span>');
+        p.push('<span class="mlb-team-name">' + App.escHtml(team.abbreviation || team.name) + '</span>');
         if (team.record) {
-            p.push('<span class="mlb-team-record">(' + this.escHtml(team.record) + ')</span>');
+            p.push('<span class="mlb-team-record">(' + App.escHtml(team.record) + ')</span>');
         }
 
         // Score
@@ -300,7 +300,8 @@ var Mlb = {
     startLivePolling: function() {
         var self = this;
         this.liveTimer = setInterval(function() {
-            if (document.getElementById('tab-mlb') &&
+            if (!document.hidden &&
+                document.getElementById('tab-mlb') &&
                 document.getElementById('tab-mlb').classList.contains('active')) {
                 self.loadSchedule(self.currentDate);
             }
@@ -389,13 +390,13 @@ var Mlb = {
                     html.push('<tr>');
                     html.push('<td class="mlb-st-team">');
                     html.push('<img class="mlb-st-logo" src="' + tm.logoUrl + '" alt="" onerror="this.style.display=\'none\'">');
-                    html.push('<span>' + this.escHtml(tm.abbreviation || tm.team_name) + '</span>');
+                    html.push('<span>' + App.escHtml(tm.abbreviation || tm.team_name) + '</span>');
                     html.push('</td>');
                     html.push('<td class="mlb-st-num">' + tm.wins + '</td>');
                     html.push('<td class="mlb-st-num">' + tm.losses + '</td>');
                     html.push('<td class="mlb-st-num">' + tm.pct + '</td>');
                     html.push('<td class="mlb-st-num">' + tm.gb + '</td>');
-                    html.push('<td class="mlb-st-num">' + this.escHtml(tm.streak) + '</td>');
+                    html.push('<td class="mlb-st-num">' + App.escHtml(tm.streak) + '</td>');
                     html.push('<td class="mlb-st-num ' + diffClass + '">' + diffStr + '</td>');
                     html.push('</tr>');
                 }
@@ -425,10 +426,10 @@ var Mlb = {
 
     renderBoxScoreModal: function(d) {
         var h = [];
-        var awayAbbr = this.escHtml(d.awayAbbr || 'AWAY');
-        var homeAbbr = this.escHtml(d.homeAbbr || 'HOME');
-        var awayName = this.escHtml(d.awayTeam || '');
-        var homeName = this.escHtml(d.homeTeam || '');
+        var awayAbbr = App.escHtml(d.awayAbbr || 'AWAY');
+        var homeAbbr = App.escHtml(d.homeAbbr || 'HOME');
+        var awayName = App.escHtml(d.awayTeam || '');
+        var homeName = App.escHtml(d.homeTeam || '');
         var isFinal = d.isFinal || (d.status && d.status.indexOf('Final') === 0);
         var awayLogo = d.awayMlbId ? '/img/teams/' + d.awayMlbId + '.png' : '';
         var homeLogo = d.homeMlbId ? '/img/teams/' + d.homeMlbId + '.png' : '';
@@ -446,7 +447,7 @@ var Mlb = {
             var statusClass = '';
             if (d.status === 'In Progress') statusClass = ' mlb-status-live';
             else if (d.status.indexOf('Final') === 0) statusClass = ' mlb-status-final';
-            h.push('<div class="mlb-box-status' + statusClass + '">' + this.escHtml(d.status));
+            h.push('<div class="mlb-box-status' + statusClass + '">' + App.escHtml(d.status));
             if (d.inningState && d.currentInning && !isFinal) {
                 var st = d.inningState === 'Top' ? 'Top' : d.inningState === 'Bottom' ? 'Bot' :
                          d.inningState === 'Middle' ? 'Mid' : d.inningState === 'End' ? 'End' : d.inningState;
@@ -514,8 +515,8 @@ var Mlb = {
             // Batter line: Batting  Name  Pos  stats
             h.push('<div class="mlb-box-matchup-line">');
             h.push('<span class="mlb-box-player-label">Batting</span> ');
-            h.push('<span class="mlb-box-player-name">' + this.escHtml(m.batter.name) + '</span>');
-            if (m.batter.position) h.push('&nbsp;&nbsp;<span class="mlb-box-player-pos">' + this.escHtml(m.batter.position) + '</span>');
+            h.push('<span class="mlb-box-player-name">' + App.escHtml(m.batter.name) + '</span>');
+            if (m.batter.position) h.push('&nbsp;&nbsp;<span class="mlb-box-player-pos">' + App.escHtml(m.batter.position) + '</span>');
             if (m.batter.stats) {
                 var bs = m.batter.stats;
                 h.push('&nbsp;&nbsp;<span class="mlb-box-player-stat">'
@@ -529,7 +530,7 @@ var Mlb = {
             // Pitcher line: Pitching  Name  stats
             h.push('<div class="mlb-box-matchup-line">');
             h.push('<span class="mlb-box-player-label">Pitching</span> ');
-            h.push('<span class="mlb-box-player-name">' + this.escHtml(m.pitcher.name) + '</span>');
+            h.push('<span class="mlb-box-player-name">' + App.escHtml(m.pitcher.name) + '</span>');
             if (m.pitcher.stats) {
                 var ps = m.pitcher.stats;
                 h.push('&nbsp;&nbsp;<span class="mlb-box-player-stat">'
@@ -598,15 +599,15 @@ var Mlb = {
 
             h.push('<tr class="' + (b.isSub ? 'mlb-box-batter-sub' : '') + '">');
             h.push('<td class="mlb-box-batter-order">' + showSpot + '</td>');
-            h.push('<td class="mlb-box-batter-name">' + (b.isSub ? '&nbsp;&nbsp;' : '') + this.escHtml(b.name) + '</td>');
-            h.push('<td class="mlb-box-batter-pos">' + this.escHtml(b.position) + '</td>');
+            h.push('<td class="mlb-box-batter-name">' + (b.isSub ? '&nbsp;&nbsp;' : '') + App.escHtml(b.name) + '</td>');
+            h.push('<td class="mlb-box-batter-pos">' + App.escHtml(b.position) + '</td>');
             h.push('<td>' + b.atBats + '</td>');
             h.push('<td>' + b.runs + '</td>');
             h.push('<td>' + b.hits + '</td>');
             h.push('<td>' + b.rbi + '</td>');
             h.push('<td>' + b.walks + '</td>');
             h.push('<td>' + b.strikeOuts + '</td>');
-            h.push('<td>' + this.escHtml(b.avg) + '</td>');
+            h.push('<td>' + App.escHtml(b.avg) + '</td>');
             h.push('</tr>');
         }
 
@@ -671,7 +672,7 @@ var Mlb = {
         for (var i = 0; i < pitchers.length; i++) {
             var p = pitchers[i];
             h.push('<tr>');
-            h.push('<td class="mlb-box-pitcher-name">' + this.escHtml(p.name) + '</td>');
+            h.push('<td class="mlb-box-pitcher-name">' + App.escHtml(p.name) + '</td>');
             h.push('<td>' + p.inningsPitched + '</td>');
             h.push('<td>' + p.hits + '</td>');
             h.push('<td>' + p.runs + '</td>');
@@ -776,25 +777,25 @@ var Mlb = {
 
         // Left: Team card
         h.push('<div class="mlb-profile-header">');
-        h.push('<img class="mlb-profile-logo" src="' + this.escHtml(logoLarge) + '"'
-            + ' onerror="this.src=\'' + this.escHtml(logoSmall) + '\'"'
-            + ' alt="' + this.escHtml(p.name) + '">');
+        h.push('<img class="mlb-profile-logo" src="' + App.escHtml(logoLarge) + '"'
+            + ' onerror="this.src=\'' + App.escHtml(logoSmall) + '\'"'
+            + ' alt="' + App.escHtml(p.name) + '">');
         h.push('<div class="mlb-profile-header-info">');
-        h.push('<div class="mlb-profile-team-name">' + this.escHtml(p.name) + '</div>');
+        h.push('<div class="mlb-profile-team-name">' + App.escHtml(p.name) + '</div>');
         // League with icon
         h.push('<div class="mlb-profile-league-row">');
         h.push('<img class="mlb-profile-league-icon" src="' + leagueLogo + '" alt="" onerror="this.style.display=\'none\'">');
-        h.push('<span>' + this.escHtml(p.league || '') + '</span>');
+        h.push('<span>' + App.escHtml(p.league || '') + '</span>');
         h.push('</div>');
         // Division with team icons strip
         if (p.division) {
             h.push('<div class="mlb-profile-league-row">');
-            h.push('<span class="mlb-profile-division-badge">' + this.escHtml(p.division) + '</span>');
+            h.push('<span class="mlb-profile-division-badge">' + App.escHtml(p.division) + '</span>');
             h.push('<span id="mlb-profile-div-icons" class="mlb-profile-div-team-icons"></span>');
             h.push('</div>');
         }
         if (p.firstYearOfPlay) {
-            h.push('<div class="mlb-profile-meta">Est. ' + this.escHtml(p.firstYearOfPlay) + '</div>');
+            h.push('<div class="mlb-profile-meta">Est. ' + App.escHtml(p.firstYearOfPlay) + '</div>');
         }
         h.push('</div>');
         h.push('</div>'); // end .mlb-profile-header
@@ -805,8 +806,8 @@ var Mlb = {
             h.push('<div class="mlb-profile-stadium-card">');
             h.push('<div class="mlb-profile-section-title">Stadium</div>');
             h.push('<div class="mlb-profile-info-card">');
-            h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">Name</span><span>' + this.escHtml(s.name) + '</span></div>');
-            h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">Location</span><span>' + this.escHtml(s.location) + '</span></div>');
+            h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">Name</span><span>' + App.escHtml(s.name) + '</span></div>');
+            h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">Location</span><span>' + App.escHtml(s.location) + '</span></div>');
             if (s.capacity) {
                 h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">Capacity</span><span>' + Number(s.capacity).toLocaleString() + '</span></div>');
             }
@@ -814,10 +815,10 @@ var Mlb = {
                 h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">Opened</span><span>' + s.opened + '</span></div>');
             }
             if (s.previousNames && s.previousNames.length > 0) {
-                h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">Previous Names</span><span>' + this.escHtml(s.previousNames.join(', ')) + '</span></div>');
+                h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">Previous Names</span><span>' + App.escHtml(s.previousNames.join(', ')) + '</span></div>');
             }
             if (p.tvChannels && p.tvChannels.length > 0) {
-                h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">TV Broadcast</span><span>' + this.escHtml(p.tvChannels.join(', ')) + '</span></div>');
+                h.push('<div class="mlb-profile-info-row"><span class="mlb-profile-info-label">TV Broadcast</span><span>' + App.escHtml(p.tvChannels.join(', ')) + '</span></div>');
             }
             h.push('</div>');
             h.push('</div>'); // end .mlb-profile-stadium-card
@@ -832,7 +833,7 @@ var Mlb = {
             var paragraphs = p.description.split('\n\n');
             for (var i = 0; i < paragraphs.length; i++) {
                 if (paragraphs[i].trim()) {
-                    h.push('<p class="mlb-profile-description">' + this.escHtml(paragraphs[i].trim()) + '</p>');
+                    h.push('<p class="mlb-profile-description">' + App.escHtml(paragraphs[i].trim()) + '</p>');
                 }
             }
             h.push('</div>');
@@ -848,7 +849,7 @@ var Mlb = {
         if (p.ticketUrl) {
             h.push('<div class="mlb-profile-section mlb-profile-tickets">');
             h.push('<div class="mlb-profile-section-title">Tickets</div>');
-            h.push('<p>Purchase tickets at <a href="' + this.escHtml(p.ticketUrl) + '" target="_blank" rel="noopener">' + this.escHtml(p.ticketUrl) + '</a></p>');
+            h.push('<p>Purchase tickets at <a href="' + App.escHtml(p.ticketUrl) + '" target="_blank" rel="noopener">' + App.escHtml(p.ticketUrl) + '</a></p>');
             h.push('</div>');
         }
 
@@ -862,13 +863,13 @@ var Mlb = {
                 var a = affiliates[i];
                 h.push('<div class="mlb-affiliate-card">');
                 if (a.logoUrl) {
-                    h.push('<img class="mlb-affiliate-logo" src="' + this.escHtml(a.logoUrl) + '" alt="" onerror="this.style.display=\'none\'">');
+                    h.push('<img class="mlb-affiliate-logo" src="' + App.escHtml(a.logoUrl) + '" alt="" onerror="this.style.display=\'none\'">');
                 }
                 h.push('<div class="mlb-affiliate-info">');
-                h.push('<div class="mlb-affiliate-level">' + this.escHtml(a.level) + '</div>');
-                h.push('<div class="mlb-affiliate-name">' + this.escHtml(a.name) + '</div>');
-                if (a.league) h.push('<div class="mlb-affiliate-detail">' + this.escHtml(a.league) + '</div>');
-                if (a.venue) h.push('<div class="mlb-affiliate-detail">' + this.escHtml(a.venue) + '</div>');
+                h.push('<div class="mlb-affiliate-level">' + App.escHtml(a.level) + '</div>');
+                h.push('<div class="mlb-affiliate-name">' + App.escHtml(a.name) + '</div>');
+                if (a.league) h.push('<div class="mlb-affiliate-detail">' + App.escHtml(a.league) + '</div>');
+                if (a.venue) h.push('<div class="mlb-affiliate-detail">' + App.escHtml(a.venue) + '</div>');
                 h.push('</div>');
                 h.push('</div>');
             }
@@ -1006,8 +1007,8 @@ var Mlb = {
         var h = [];
         for (var i = 0; i < teams.length; i++) {
             h.push('<img class="mlb-division-icon" src="/img/teams/' + teams[i].mlb_id + '.png"'
-                + ' alt="' + this.escHtml(teams[i].abbreviation) + '"'
-                + ' title="' + this.escHtml(teams[i].name) + '"'
+                + ' alt="' + App.escHtml(teams[i].abbreviation) + '"'
+                + ' title="' + App.escHtml(teams[i].name) + '"'
                 + ' style="cursor:pointer;" onclick="Mlb.loadTeamProfile(' + teams[i].mlb_id + ')"'
                 + ' onerror="this.style.display=\'none\'">');
         }
@@ -1033,8 +1034,8 @@ var Mlb = {
         var h = [];
         for (var i = 0; i < teams.length; i++) {
             h.push('<img class="mlb-profile-div-icon" src="/img/teams/' + teams[i].mlb_id + '.png"'
-                + ' alt="' + this.escHtml(teams[i].abbreviation) + '"'
-                + ' title="' + this.escHtml(teams[i].name) + '"'
+                + ' alt="' + App.escHtml(teams[i].abbreviation) + '"'
+                + ' title="' + App.escHtml(teams[i].name) + '"'
                 + ' onerror="this.style.display=\'none\'">');
         }
         container.innerHTML = h.join('');
@@ -1054,7 +1055,7 @@ var Mlb = {
 
             var col = [];
             col.push('<div class="mlb-profile-games-col">');
-            col.push('<div class="mlb-profile-games-col-header">' + this.escHtml(label) + '</div>');
+            col.push('<div class="mlb-profile-games-col-header">' + App.escHtml(label) + '</div>');
             if (games.length === 0) {
                 col.push('<p class="text-muted" style="padding:8px;font-size:13px;">No games</p>');
             } else {
@@ -1070,14 +1071,5 @@ var Mlb = {
             return '<p class="text-muted">No games scheduled for this period</p>';
         }
         return '<div class="mlb-profile-games-row">' + columns.join('') + '</div>';
-    },
-
-    // ─── Helpers ───────────────────────────────────────────────
-
-    escHtml: function(str) {
-        if (!str) return '';
-        var div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
     }
 };

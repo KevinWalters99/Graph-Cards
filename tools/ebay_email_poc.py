@@ -13,9 +13,10 @@ from datetime import datetime
 IMAP_HOST = 'imap.mail.yahoo.com'
 IMAP_PORT = 993
 
-# Credentials from .env
-YAHOO_EMAIL = 'collinwalters123@yahoo.com'
-YAHOO_APP_PASSWORD = 'pjnpsukyleqttwoq'
+# Credentials from shared config
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cardgraph', 'tools'))
+from cg_config import YAHOO_EMAIL, YAHOO_APP_PASSWORD
 
 def connect_imap(email_addr, app_password):
     """Connect to Yahoo IMAP and return the mailbox."""

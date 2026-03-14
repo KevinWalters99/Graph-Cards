@@ -1,8 +1,12 @@
 <?php
 header('Content-Type: text/plain');
-$pdo = new PDO("mysql:host=127.0.0.1;port=3307;dbname=card_graph;charset=utf8mb4", 'cg_app', 'ACe!sysD#0kVnBWF', [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-]);
+$secrets = require __DIR__ . '/../config/secrets.php';
+$db = $secrets['db'];
+$pdo = new PDO(
+    sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $db['host'], $db['port'], $db['dbname'], $db['charset']),
+    $db['username'], $db['password'],
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+);
 
 echo "=== CG_EbayOrders for Feb 17-18 ===\n";
 $stmt = $pdo->query("SELECT ebay_order_id, order_number, order_date, source, seller_buyer_name, total_amount, status, email_subject

@@ -5,6 +5,7 @@
 const App = {
     currentTab: 'dashboard',
     user: null,
+    _switchTimeout: null,
 
     async init() {
         // Check if logged in
@@ -36,7 +37,14 @@ const App = {
 
         // Load alerts & scroll ticker
         Alerts.loadActive();
-        setInterval(function() { Alerts.loadActive(); }, 300000); // refresh every 5 min
+        setInterval(function() {
+            if (!document.hidden) Alerts.loadActive();
+        }, 300000); // refresh every 5 min, only when page is visible
+
+        // Refresh alerts when user returns to the page
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) Alerts.loadActive();
+        });
 
         // Load initial tab
         this.switchTab('dashboard');
@@ -45,16 +53,34 @@ const App = {
     switchTab(tabName) {
         this.currentTab = tabName;
 
-        // Update nav active state
+        // Update nav active state immediately (no delay for UI feedback)
         document.querySelectorAll('.nav-tabs li').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.tab === tabName);
         });
 
-        // Update panel visibility
+        // Update panel visibility immediately
         document.querySelectorAll('.tab-panel').forEach(panel => {
             panel.classList.toggle('active', panel.id === `tab-${tabName}`);
         });
 
+        // Move scroll ticker into the active tab's page-header
+        const ticker = document.getElementById('scroll-ticker');
+        const header = document.querySelector(`#tab-${tabName} .page-header`);
+        if (header && ticker) {
+            const h1 = header.querySelector('h1');
+            if (h1 && h1.nextElementSibling) {
+                header.insertBefore(ticker, h1.nextElementSibling);
+            } else {
+                header.appendChild(ticker);
+            }
+        }
+
+        // Debounce data loading (50ms) to prevent duplicate API calls from rapid clicks
+        if (this._switchTimeout) clearTimeout(this._switchTimeout);
+        this._switchTimeout = setTimeout(() => this._loadTab(tabName), 50);
+    },
+
+    _loadTab(tabName) {
         // Stop MLB live polling when leaving the tab
         if (typeof Mlb !== 'undefined' && Mlb.liveTimer) {
             Mlb.stopLivePolling();
@@ -93,18 +119,6 @@ const App = {
                 Maintenance.init();
                 break;
         }
-
-        // Move scroll ticker into the active tab's page-header (right of the title)
-        const ticker = document.getElementById('scroll-ticker');
-        const header = document.querySelector(`#tab-${tabName} .page-header`);
-        if (header && ticker) {
-            const h1 = header.querySelector('h1');
-            if (h1 && h1.nextElementSibling) {
-                header.insertBefore(ticker, h1.nextElementSibling);
-            } else {
-                header.appendChild(ticker);
-            }
-        }
     },
 
     /**
@@ -132,6 +146,19 @@ const App = {
 
     hideLoading() {
         document.getElementById('loading').style.display = 'none';
+    },
+
+    /**
+     * Show skeleton loading cards in a container.
+     */
+    showSkeletons(containerId, count) {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        let html = '';
+        for (let i = 0; i < count; i++) {
+            html += '<div class="skeleton-card"><div class="skeleton skeleton-label"></div><div class="skeleton skeleton-value"></div></div>';
+        }
+        el.innerHTML = html;
     },
 
     /**
@@ -182,6 +209,16 @@ const App = {
             month: 'short', day: 'numeric', year: 'numeric',
             hour: 'numeric', minute: '2-digit'
         });
+    },
+
+    /**
+     * Escape HTML special characters for safe insertion.
+     */
+    escHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     },
 
     /**

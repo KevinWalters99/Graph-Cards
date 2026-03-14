@@ -51,7 +51,7 @@ const FinancialSummary = {
     async loadOverview() {
         try {
             App.showLoading();
-            const data = await API.get('/api/financial-summary/overview');
+            const data = await API.cachedGet('/api/financial-summary/overview', null, 120000);
             this.renderOverview(data);
         } catch (err) {
             App.toast(err.message, 'error');

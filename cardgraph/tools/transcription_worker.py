@@ -9,22 +9,16 @@ Usage:
 """
 import argparse
 import os
+import re
 import signal
 import sys
 import time
+from collections import Counter
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pymysql
-
-DB_CONFIG = {
-    'host': '192.168.0.215',
-    'port': 3307,
-    'user': 'cg_app',
-    'password': 'ACe!sysD#0kVnBWF',
-    'database': 'card_graph',
-    'charset': 'utf8mb4',
-}
+from cg_config import DB_CONFIG
 
 running = True
 whisper_model = None
@@ -84,6 +78,68 @@ def transcribe_segment(audio_path, output_path):
         f.write('\n')
 
     return text
+
+
+def is_whisper_hallucination(text):
+    """Detect Whisper hallucination patterns caused by silence or near-silence.
+
+    Whisper generates repetitive garbage when processing silent audio:
+    - "you you you you you you you"
+    - "Thank you. Thank you. Thank you."
+    - "Thanks for watching! Subscribe!"
+    - Single words repeated endlessly
+
+    Returns (is_hallucination: bool, reason: str).
+    """
+    if not text or not text.strip():
+        return True, 'empty_transcript'
+
+    cleaned = text.strip()
+    words = cleaned.lower().split()
+    word_count = len(words)
+
+    # Very short transcripts from a full segment are suspicious but not garbage
+    if word_count < 3:
+        return True, 'too_short'
+
+    # --- Single word repetition ---
+    # If any one word makes up 50%+ of the transcript, it's hallucination
+    counts = Counter(words)
+    most_common_word, most_common_count = counts.most_common(1)[0]
+    if word_count >= 6 and most_common_count / word_count >= 0.50:
+        return True, f'word_repetition:{most_common_word}({most_common_count}/{word_count})'
+
+    # --- Low vocabulary ratio ---
+    # Real speech has variety; hallucinations repeat the same few words
+    unique_ratio = len(counts) / word_count
+    if word_count >= 10 and unique_ratio < 0.15:
+        return True, f'low_vocabulary:{len(counts)}_unique/{word_count}_total'
+
+    # --- Phrase repetition ---
+    # Check for repeated 2-3 word phrases (e.g., "thank you" x20)
+    if word_count >= 8:
+        for phrase_len in (2, 3):
+            phrases = [' '.join(words[i:i+phrase_len]) for i in range(len(words) - phrase_len + 1)]
+            if phrases:
+                phrase_counts = Counter(phrases)
+                top_phrase, top_count = phrase_counts.most_common(1)[0]
+                # If a phrase appears in 40%+ of possible positions, it's repetitive
+                if top_count >= max(4, len(phrases) * 0.40):
+                    return True, f'phrase_repetition:"{top_phrase}"x{top_count}'
+
+    # --- Known hallucination phrases (common Whisper silence artifacts) ---
+    hallucination_patterns = [
+        r'(?:thanks?\s+(?:for\s+)?watching)',
+        r'(?:subscribe\s+(?:to\s+)?(?:my\s+)?channel)',
+        r'(?:please\s+like\s+and\s+subscribe)',
+        r'(?:see\s+you\s+(?:in\s+)?(?:the\s+)?next\s+(?:video|one))',
+    ]
+    lower_text = cleaned.lower()
+    for pattern in hallucination_patterns:
+        if re.search(pattern, lower_text) and word_count < 20:
+            return True, f'known_hallucination_phrase'
+
+    return False, ''
 
 
 def main():
@@ -210,6 +266,29 @@ def main():
 
             try:
                 text = transcribe_segment(audio_path, tx_path)
+
+                # Check for Whisper hallucination (silence artifacts)
+                is_hallucination, hallucination_reason = is_whisper_hallucination(text)
+
+                if is_hallucination:
+                    # Delete the garbage transcript file
+                    if os.path.exists(tx_path):
+                        os.remove(tx_path)
+                    # Delete the audio file (silence, no value)
+                    if os.path.exists(audio_path):
+                        os.remove(audio_path)
+
+                    with db.cursor() as cur:
+                        cur.execute(
+                            "UPDATE CG_TranscriptionSegments SET "
+                            "transcription_status = 'skipped', "
+                            "error_message = %s WHERE segment_id = %s",
+                            (f'whisper_hallucination:{hallucination_reason}', seg_id)
+                        )
+
+                    log_event(db, session_id, 'info', 'hallucination_skipped',
+                              f"Segment {seg_num} skipped — Whisper hallucination detected ({hallucination_reason})")
+                    continue
 
                 # Mark complete
                 with db.cursor() as cur:

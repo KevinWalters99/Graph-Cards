@@ -26,13 +26,14 @@ from datetime import datetime
 
 import pymysql
 
+# Inside Docker: credentials passed via environment variables (docker run -e)
 DB_CONFIG = {
-    'host': '192.168.0.215',
-    'port': 3307,
-    'user': 'cg_app',
-    'password': 'ACe!sysD#0kVnBWF',
-    'database': 'card_graph',
-    'charset': 'utf8mb4',
+    'host':     os.environ.get('CG_DB_HOST', '192.168.0.215'),
+    'port':     int(os.environ.get('CG_DB_PORT', '3307')),
+    'user':     os.environ.get('CG_DB_USER', 'cg_app'),
+    'password': os.environ.get('CG_DB_PASSWORD', ''),
+    'database': os.environ.get('CG_DB_NAME', 'card_graph'),
+    'charset':  'utf8mb4',
 }
 
 SIGNAL_DIR = '/signals'

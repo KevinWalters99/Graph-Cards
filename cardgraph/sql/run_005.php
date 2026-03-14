@@ -5,16 +5,15 @@
  * DELETE from NAS after running.
  */
 header('Content-Type: text/plain');
-$host = '127.0.0.1';
-$port = 3307;
-$db   = 'card_graph';
-$user = 'cg_app';
-$pass = 'ACe!sysD#0kVnBWF';
+$secrets = require __DIR__ . '/../config/secrets.php';
+$db = $secrets['db'];
 
 try {
-    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    ]);
+    $pdo = new PDO(
+        sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $db['host'], $db['port'], $db['dbname'], $db['charset']),
+        $db['username'], $db['password'],
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
 
     $sql = file_get_contents(__DIR__ . '/005_paypal.sql');
 

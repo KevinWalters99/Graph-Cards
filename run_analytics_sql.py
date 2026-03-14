@@ -1,13 +1,9 @@
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cardgraph', 'tools'))
 import pymysql
+from cg_config import DB_CONFIG
 
-conn = pymysql.connect(
-    host='192.168.0.215',
-    port=3307,
-    user='cg_app',
-    password='ACe!sysD#0kVnBWF',
-    database='card_graph',
-    charset='utf8mb4'
-)
+conn = pymysql.connect(**DB_CONFIG)
 cursor = conn.cursor()
 
 # 1. Create CG_AnalyticsMetrics

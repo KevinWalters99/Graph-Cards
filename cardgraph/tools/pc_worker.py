@@ -22,17 +22,11 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 # ─── Config ─────────────────────────────────────────────────────
-DB_CONFIG = {
-    'host': '192.168.0.215',
-    'port': 3307,
-    'user': 'cg_app',
-    'password': 'ACe!sysD#0kVnBWF',
-    'database': 'card_graph',
-    'charset': 'utf8mb4',
-}
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from cg_config import DB_CONFIG, NAS_IP
 
 # NAS share path (mapped or UNC)
-NAS_SHARE = r'\\192.168.0.215\web\cardgraph'
+NAS_SHARE = rf'\\{NAS_IP}\web\cardgraph'
 
 PORT = 8891
 

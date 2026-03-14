@@ -24,8 +24,11 @@ import sys
 
 # Ensure this script's directory is on the path (for NAS where pymysql is co-located)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Also add cardgraph/tools for shared config
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cardgraph', 'tools'))
 
 import pymysql
+from cg_config import DB_CONFIG, YAHOO_EMAIL as _YAHOO_EMAIL, YAHOO_APP_PASSWORD as _YAHOO_APP_PASSWORD
 from ebay_parser import (
     parse_order_confirmed_email,
     parse_paypal_ebay_email,
@@ -39,21 +42,12 @@ from ebay_parser import (
 # === Configuration ===
 IMAP_HOST = 'imap.mail.yahoo.com'
 IMAP_PORT = 993
-YAHOO_EMAIL = 'collinwalters123@yahoo.com'
-YAHOO_APP_PASSWORD = 'pjnpsukyleqttwoq'
+YAHOO_EMAIL = _YAHOO_EMAIL
+YAHOO_APP_PASSWORD = _YAHOO_APP_PASSWORD
 
 EBAY_FOLDER = 'eBay'           # Order confirmations (after import)
 PAYPAL_FOLDER = 'PayPal'       # PayPal receipts (after import)
 NOTICE_FOLDER = 'eBay-Notice'  # Notices, delivered, payouts, etc.
-
-DB_CONFIG = {
-    'host': '192.168.0.215',
-    'port': 3307,
-    'user': 'cg_app',
-    'password': 'ACe!sysD#0kVnBWF',
-    'database': 'card_graph',
-    'charset': 'utf8mb4',
-}
 
 
 def safe(s):

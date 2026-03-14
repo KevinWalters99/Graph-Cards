@@ -31,7 +31,7 @@ const Analytics = {
 
     async loadMetrics() {
         try {
-            const result = await API.get('/api/analytics/metrics');
+            const result = await API.cachedGet('/api/analytics/metrics', null, 60000);
             this.metrics = (result.data || []).filter(m => m.is_active == 1);
         } catch (e) { /* silent */ }
     },
