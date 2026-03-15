@@ -493,60 +493,32 @@ const FinancialSummary = {
                     html += `<td style="text-align:right"><span class="${m.net >= 0 ? 'text-success' : 'text-danger'}">${cur(m.net)}</span></td>`;
                     html += '</tr>';
 
-                    // Detail sub-rows: individual dated entries
+                    // Detail sub-rows: daily summary rows (same columns)
                     const hideD = (yearCollapsed || qCollapsed || !monthExpanded) ? 'display:none;' : '';
-                    const details = this.monthlyDetailsCache[m.month];
+                    const dayData = this.monthlyDetailsCache[m.month];
 
-                    if (monthExpanded && !details && !this.loadingDetails[m.month]) {
-                        // Need to fetch — show loading row, then fetch
+                    if (monthExpanded && !dayData && !this.loadingDetails[m.month]) {
                         html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="font-size:12px;${hideD}">`;
-                        html += `<td colspan="10" style="padding-left:72px;color:#888;font-style:italic;">Loading details...</td>`;
+                        html += `<td colspan="10" style="padding-left:72px;color:#888;font-style:italic;">Loading daily data...</td>`;
                         html += '</tr>';
-                    } else if (details && details.length === 0) {
+                    } else if (dayData && dayData.length === 0) {
                         html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="font-size:12px;${hideD}">`;
-                        html += `<td colspan="10" style="padding-left:72px;color:#888;font-style:italic;">No detail records for this month.</td>`;
+                        html += `<td colspan="10" style="padding-left:72px;color:#888;font-style:italic;">No daily data for this month.</td>`;
                         html += '</tr>';
-                    } else if (details) {
-                        details.forEach(rec => {
-                            const dateLabel = fmtDate(rec.date);
-                            const srcBadge = this._sourceBadge(rec.source, rec.category);
-                            const desc = this._escHtml(rec.description || '');
-
+                    } else if (dayData) {
+                        dayData.forEach(day => {
+                            const dayLabel = fmtDate(day.date);
                             html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="font-size:12px;${hideD}">`;
-                            html += `<td style="padding-left:72px;">${dateLabel} ${srcBadge} ${desc}</td>`;
-
-                            // Place amount in the correct column based on source
-                            if (rec.source === 'general_cost') {
-                                html += '<td></td><td></td><td></td><td></td>';
-                                html += `<td style="text-align:right;color:#e53935;">${cur(rec.amount)}</td>`;
-                                html += '<td></td><td></td><td></td>';
-                                html += `<td style="text-align:right;color:#e53935;">-${cur(rec.amount)}</td>`;
-                            } else if (rec.source === 'paypal') {
-                                html += '<td></td><td></td><td></td><td></td><td></td>';
-                                if (rec.category === 'purchase') {
-                                    html += `<td style="text-align:right;color:#e53935;">${cur(rec.amount)}</td>`;
-                                    html += '<td></td><td></td>';
-                                    html += `<td style="text-align:right;color:#e53935;">${cur(rec.amount)}</td>`;
-                                } else if (rec.category === 'income') {
-                                    html += '<td></td>';
-                                    html += `<td style="text-align:right;color:#2e7d32;">${cur(rec.amount)}</td>`;
-                                    html += '<td></td>';
-                                    html += `<td style="text-align:right;color:#2e7d32;">${cur(rec.amount)}</td>`;
-                                } else if (rec.category === 'refund') {
-                                    html += `<td style="text-align:right;color:#ef6c00;">${cur(rec.amount)}</td>`;
-                                    html += '<td></td><td></td>';
-                                    html += `<td style="text-align:right;color:#ef6c00;">${cur(rec.amount)}</td>`;
-                                } else {
-                                    html += '<td></td><td></td><td></td>';
-                                    html += `<td style="text-align:right">${cur(rec.amount)}</td>`;
-                                }
-                            } else if (rec.source === 'payout') {
-                                html += '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                                html += `<td style="text-align:right;color:#2e7d32;">${cur(rec.amount)}</td>`;
-                                html += `<td style="text-align:right;color:#2e7d32;">${cur(rec.amount)}</td>`;
-                            } else {
-                                html += '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                            }
+                            html += `<td style="padding-left:72px;">${dayLabel}</td>`;
+                            html += `<td style="text-align:right">${day.auction_count || ''}</td>`;
+                            html += `<td style="text-align:right">${day.total_earnings ? cur(day.total_earnings) : ''}</td>`;
+                            html += `<td style="text-align:right">${day.total_fees ? cur(day.total_fees) : ''}</td>`;
+                            html += `<td style="text-align:right">${day.total_item_costs ? cur(day.total_item_costs) : ''}</td>`;
+                            html += `<td style="text-align:right">${day.total_general_costs ? cur(day.total_general_costs) : ''}</td>`;
+                            html += `<td style="text-align:right">${day.pp_purchases ? cur(day.pp_purchases) : ''}</td>`;
+                            html += `<td style="text-align:right">${day.pp_income ? cur(day.pp_income) : ''}</td>`;
+                            html += `<td style="text-align:right">${day.total_payouts ? cur(day.total_payouts) : ''}</td>`;
+                            html += `<td style="text-align:right"><span class="${day.net >= 0 ? 'text-success' : 'text-danger'}">${cur(day.net)}</span></td>`;
                             html += '</tr>';
                         });
                     }
@@ -605,7 +577,7 @@ const FinancialSummary = {
         this.loadingDetails[month] = true;
         try {
             const result = await API.get('/api/financial-summary/monthly-details', { month });
-            this.monthlyDetailsCache[month] = result.records || [];
+            this.monthlyDetailsCache[month] = result.days || [];
         } catch (err) {
             this.monthlyDetailsCache[month] = [];
             console.error('Failed to load details for ' + month, err);
@@ -613,29 +585,6 @@ const FinancialSummary = {
             delete this.loadingDetails[month];
             this.renderMonthly();
         }
-    },
-
-    _sourceBadge(source, category) {
-        const badges = {
-            general_cost: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#ffebee;color:#c62828;margin:0 4px;">COST</span>',
-            payout: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#e8f5e9;color:#2e7d32;margin:0 4px;">PAYOUT</span>',
-        };
-        if (source === 'paypal') {
-            const catLabels = {
-                purchase: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#fff3e0;color:#e65100;margin:0 4px;">PP-BUY</span>',
-                income: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#e8f5e9;color:#2e7d32;margin:0 4px;">PP-IN</span>',
-                refund: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#fce4ec;color:#ad1457;margin:0 4px;">PP-REFUND</span>',
-            };
-            return catLabels[category] || '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#e3f2fd;color:#1565c0;margin:0 4px;">PAYPAL</span>';
-        }
-        return badges[source] || '';
-    },
-
-    _escHtml(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
     },
 
     _emptyTotals() {

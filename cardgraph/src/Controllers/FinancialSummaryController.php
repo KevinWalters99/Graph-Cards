@@ -389,10 +389,9 @@ class FinancialSummaryController
 
     /**
      * GET /api/financial-summary/monthly-details?month=YYYY-MM
-     * Returns individual dated records for a given month:
-     *   - General costs (expenses)
-     *   - PayPal transactions (purchases/refunds/income)
-     *   - Payouts received
+     * Returns daily aggregated summaries for a given month.
+     * Same column structure as the monthly summary: auctions, earnings,
+     * fees, item costs, general costs, PayPal, payouts, net — per day.
      */
     public function monthlyDetails(array $params = []): void
     {
@@ -404,77 +403,136 @@ class FinancialSummaryController
         $pdo = cg_db();
         $startDate = $month . '-01';
         $endDate = date('Y-m-t', strtotime($startDate));
-        $records = [];
 
-        // General costs
+        // Get excluded status IDs
+        $excludedStatuses = $pdo->query(
+            "SELECT status_type_id FROM CG_StatusTypes
+             WHERE status_name IN ('Cancelled', 'Refused', 'Did Not Pay', 'Returned', 'Disputed')"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        $excludeList = implode(',', array_map('intval', $excludedStatuses));
+        $statusFilter = $excludeList ? "AND a.current_status_id NOT IN ({$excludeList})" : '';
+
+        $days = [];
+
+        // Auction data by day
         $stmt = $pdo->prepare(
-            "SELECT cost_date, description, total AS amount
+            "SELECT DATE(a.order_placed_at) AS day,
+                    SUM(CASE WHEN a.buy_format = 'AUCTION' THEN 1 ELSE 0 END) AS auction_count,
+                    COALESCE(SUM(a.transaction_amount), 0) AS total_earnings,
+                    COALESCE(SUM(
+                        COALESCE(a.commission_fee, 0) + COALESCE(a.payment_processing_fee, 0) +
+                        COALESCE(a.tax_on_commission_fee, 0) + COALESCE(a.tax_on_payment_processing_fee, 0) +
+                        COALESCE(a.shipping_fee, 0)
+                    ), 0) AS total_fees,
+                    COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price ELSE 0 END), 0) AS total_item_price
+             FROM CG_AuctionLineItems a
+             WHERE a.order_placed_at BETWEEN :start AND :end
+               {$statusFilter}
+             GROUP BY DATE(a.order_placed_at)"
+        );
+        $stmt->execute([':start' => $startDate . ' 00:00:00', ':end' => $endDate . ' 23:59:59']);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $d = $row['day'];
+            if (!isset($days[$d])) $days[$d] = $this->emptyDay($d);
+            $days[$d]['auction_count'] = (int) $row['auction_count'];
+            $days[$d]['total_earnings'] = round((float) $row['total_earnings'], 2);
+            $days[$d]['total_fees'] = round((float) $row['total_fees'], 2);
+            $days[$d]['total_item_price'] = round((float) $row['total_item_price'], 2);
+        }
+
+        // Item costs by day (based on auction order date)
+        $stmt = $pdo->prepare(
+            "SELECT DATE(a.order_placed_at) AS day,
+                    COALESCE(SUM(c.cost_amount), 0) AS total_item_costs
+             FROM CG_ItemCosts c
+             JOIN CG_AuctionLineItems a ON a.ledger_transaction_id = c.ledger_transaction_id
+             WHERE a.order_placed_at BETWEEN :start AND :end
+               {$statusFilter}
+             GROUP BY DATE(a.order_placed_at)"
+        );
+        $stmt->execute([':start' => $startDate . ' 00:00:00', ':end' => $endDate . ' 23:59:59']);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $d = $row['day'];
+            if (!isset($days[$d])) $days[$d] = $this->emptyDay($d);
+            $days[$d]['total_item_costs'] = round((float) $row['total_item_costs'], 2);
+        }
+
+        // General costs by day
+        $stmt = $pdo->prepare(
+            "SELECT cost_date AS day, COALESCE(SUM(total), 0) AS total_general_costs
              FROM CG_GeneralCosts
              WHERE cost_date BETWEEN :start AND :end
-             ORDER BY cost_date"
+             GROUP BY cost_date"
         );
         $stmt->execute([':start' => $startDate, ':end' => $endDate]);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $records[] = [
-                'date'        => $row['cost_date'],
-                'source'      => 'general_cost',
-                'description' => $row['description'],
-                'amount'      => round((float) $row['amount'], 2),
-            ];
+            $d = $row['day'];
+            if (!isset($days[$d])) $days[$d] = $this->emptyDay($d);
+            $days[$d]['total_general_costs'] = round((float) $row['total_general_costs'], 2);
         }
 
-        // PayPal transactions (purchase/refund/income)
+        // PayPal by day
         $stmt = $pdo->prepare(
-            "SELECT transaction_date, name, type, charge_category, amount, fees, net_amount
+            "SELECT transaction_date AS day,
+                    COALESCE(SUM(CASE WHEN charge_category = 'purchase' THEN amount ELSE 0 END), 0) AS pp_purchases,
+                    COALESCE(SUM(CASE WHEN charge_category = 'refund' THEN amount ELSE 0 END), 0) AS pp_refunds,
+                    COALESCE(SUM(CASE WHEN charge_category = 'income' THEN amount ELSE 0 END), 0) AS pp_income
              FROM CG_PayPalTransactions
              WHERE transaction_date BETWEEN :start AND :end
                AND charge_category IN ('purchase', 'refund', 'income')
-             ORDER BY transaction_date"
+             GROUP BY transaction_date"
         );
         $stmt->execute([':start' => $startDate, ':end' => $endDate]);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $desc = $row['name'] ?: $row['type'];
-            if ($row['name'] && $row['type']) {
-                $desc = $row['name'] . ' (' . $row['type'] . ')';
-            }
-            $records[] = [
-                'date'        => $row['transaction_date'],
-                'source'      => 'paypal',
-                'category'    => $row['charge_category'],
-                'description' => $desc,
-                'amount'      => round((float) $row['amount'], 2),
-                'fees'        => round((float) $row['fees'], 2),
-            ];
+            $d = $row['day'];
+            if (!isset($days[$d])) $days[$d] = $this->emptyDay($d);
+            $days[$d]['pp_purchases'] = round((float) $row['pp_purchases'], 2);
+            $days[$d]['pp_refunds'] = round((float) $row['pp_refunds'], 2);
+            $days[$d]['pp_income'] = round((float) $row['pp_income'], 2);
         }
 
-        // Payouts
+        // Payouts by day
         $stmt = $pdo->prepare(
-            "SELECT date_initiated, amount, destination, notes
+            "SELECT date_initiated AS day, COALESCE(SUM(amount), 0) AS total_payouts
              FROM CG_Payouts
              WHERE status != 'Failed'
                AND date_initiated BETWEEN :start AND :end
-             ORDER BY date_initiated"
+             GROUP BY date_initiated"
         );
         $stmt->execute([':start' => $startDate, ':end' => $endDate]);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $desc = 'Payout';
-            if ($row['destination']) {
-                $desc .= ' to ' . $row['destination'];
-            }
-            $records[] = [
-                'date'        => $row['date_initiated'],
-                'source'      => 'payout',
-                'description' => $desc,
-                'amount'      => round((float) $row['amount'], 2),
-            ];
+            $d = $row['day'];
+            if (!isset($days[$d])) $days[$d] = $this->emptyDay($d);
+            $days[$d]['total_payouts'] = round((float) $row['total_payouts'], 2);
         }
 
-        // Sort all by date
-        usort($records, function ($a, $b) {
+        // Compute net for each day and sort
+        $result = [];
+        foreach ($days as $d => &$day) {
+            $day['net'] = round(
+                $day['total_item_price'] - $day['total_fees'] - $day['total_item_costs']
+                - $day['total_general_costs'] + $day['pp_purchases'] + $day['pp_income']
+                + $day['pp_refunds'],
+                2
+            );
+            $result[] = $day;
+        }
+        usort($result, function ($a, $b) {
             return strcmp($a['date'], $b['date']);
         });
 
-        jsonResponse(['month' => $month, 'records' => $records]);
+        jsonResponse(['month' => $month, 'days' => $result]);
+    }
+
+    private function emptyDay(string $date): array
+    {
+        return [
+            'date' => $date,
+            'auction_count' => 0, 'total_earnings' => 0, 'total_fees' => 0,
+            'total_item_price' => 0, 'total_item_costs' => 0, 'total_general_costs' => 0,
+            'pp_purchases' => 0, 'pp_refunds' => 0, 'pp_income' => 0,
+            'total_payouts' => 0, 'net' => 0,
+        ];
     }
 
     /**
