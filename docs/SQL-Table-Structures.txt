@@ -1,0 +1,37 @@
+Create a new tab under the Maintenance section called SQL-Table Structures.
+
+This tab should provide a compact, structured overview of all SQL database tables currently used by the application. The goal is to give clear visibility into the database schema and how it is used within the system.
+
+Requirements:
+
+Display a list of all table names used by the application.
+
+Each table entry should be collapsible, allowing it to expand and show:
+
+Field names
+
+Field data types
+
+Include the following metadata for each table:
+
+A short description of the table’s purpose
+
+The application tab or feature where the table is used
+
+The current number of records in the table
+
+Design requirements:
+
+The layout should be compact and concise, minimizing screen space usage.
+
+Use collapsible sections or similar UI elements so detailed field information is only visible when expanded.
+
+Ensure the interface allows quick visibility across all tables without overwhelming the screen.
+
+Operational requirements:
+
+This tool should help verify that data is being properly stored and used within the application.
+
+Whenever a new table is created, it must also be documented within this structure view.
+
+The goal is to maintain complete visibility and documentation of the database schema to ensure consistency and data integrity across the application.

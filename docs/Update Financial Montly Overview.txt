@@ -1,0 +1,10 @@
+I need the monthly overview moved to the first tab position, and I want the column payout amount added right in the middle before gen costs. And that's going to be the calculation we're going to do is that number, subtract general costs. We're gonna take away the PayPal out. It's gonna reduce the amount. We're gonna add PayPal in. We're not gonna use item cost. We're not gonna use fees, and we're not gonna use earnings. Those are just display only. So the payouts, I wanna slid over to the left of gen cost, and I want to color code. Payouts are incoming. I want the payouts highlighted green, general cost highlight red, PayPal out highlight red, PayPal in highlight green. And we're only gonna use those four as the calculations. All others are ancillary. They're there for display only. Display only. They do not calculate the net.
+I also want to highlight the month, see below for the Highlight color chart
+Monthly Net column should be BOLD
+
+
+
+Year	Dark navy #1a1a2e	Same + blue accent bottom border
+Quarter	Soft blue #e3edf7
+Month	Light grey #f5f5f5
+Day	White	
