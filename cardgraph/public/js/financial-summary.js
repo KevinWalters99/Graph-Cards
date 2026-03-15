@@ -8,6 +8,8 @@ const FinancialSummary = {
     costs: [],
     monthlyData: null,
     collapsed: {},  // tracks collapsed state: { '2025': true, '2025-Q1': true }
+    monthlyDetailsCache: {},  // { '2025-01': [records...] }
+    loadingDetails: {},  // { '2025-01': true } — prevents duplicate fetches
 
     async init() {
         const panel = document.getElementById('tab-financial-summary');
@@ -375,6 +377,11 @@ const FinancialSummary = {
         }
 
         const cur = (v) => App.formatCurrency(v);
+        const fmtDate = (d) => {
+            if (!d) return '';
+            const parts = d.split('-');
+            return parts[1] + '/' + parts[2];
+        };
 
         // Group months into years and quarters
         const years = {};
@@ -417,7 +424,7 @@ const FinancialSummary = {
             const yTot = yearData.totals;
             const yearCollapsed = !!this.collapsed[yr];
 
-            // Year row (always visible, clickable)
+            // Year row
             html += `<tr class="fs-row-year" data-toggle="${yr}" style="cursor:pointer;background:#1a1a2e;color:#fff;">`;
             html += `<td><span class="fs-toggle-icon">${yearCollapsed ? '&#9654;' : '&#9660;'}</span> <strong>${yr}</strong></td>`;
             html += `<td style="text-align:right"><strong>${yTot.auction_count}</strong></td>`;
@@ -431,7 +438,7 @@ const FinancialSummary = {
             html += `<td style="text-align:right"><strong class="${yTot.net >= 0 ? 'text-success' : 'text-danger'}">${cur(yTot.net)}</strong></td>`;
             html += '</tr>';
 
-            // Build quarters within this year
+            // Build quarters
             const quarters = {};
             yearData.months.forEach(m => {
                 const mo = parseInt(m.month.split('-')[1]);
@@ -465,15 +472,16 @@ const FinancialSummary = {
                 html += `<td style="text-align:right"><strong class="${qTot.net >= 0 ? 'text-success' : 'text-danger'}">${cur(qTot.net)}</strong></td>`;
                 html += '</tr>';
 
-                // Month rows within quarter
+                // Month rows
                 const sortedMonths = qData.months.sort((a, b) => b.month.localeCompare(a.month));
                 sortedMonths.forEach(m => {
                     const hideM = (yearCollapsed || qCollapsed) ? 'display:none;' : '';
                     const monthLabel = this._monthName(m.month);
+                    const monthExpanded = !this.collapsed['m-' + m.month];
 
                     // Month summary row
                     html += `<tr class="fs-row-month fs-child-${yr} fs-child-${qKey}" data-toggle="m-${m.month}" style="cursor:pointer;${hideM}">`;
-                    html += `<td style="padding-left:48px;"><span class="fs-toggle-icon">${this.collapsed['m-' + m.month] ? '&#9654;' : '&#9660;'}</span> ${monthLabel}</td>`;
+                    html += `<td style="padding-left:48px;"><span class="fs-toggle-icon">${monthExpanded ? '&#9660;' : '&#9654;'}</span> ${monthLabel}</td>`;
                     html += `<td style="text-align:right">${m.auction_count}</td>`;
                     html += `<td style="text-align:right">${cur(m.total_earnings)}</td>`;
                     html += `<td style="text-align:right">${cur(m.total_fees)}</td>`;
@@ -485,52 +493,62 @@ const FinancialSummary = {
                     html += `<td style="text-align:right"><span class="${m.net >= 0 ? 'text-success' : 'text-danger'}">${cur(m.net)}</span></td>`;
                     html += '</tr>';
 
-                    // Detail sub-rows for this month
-                    const hideD = (yearCollapsed || qCollapsed || !!this.collapsed['m-' + m.month]) ? 'display:none;' : '';
+                    // Detail sub-rows: individual dated entries
+                    const hideD = (yearCollapsed || qCollapsed || !monthExpanded) ? 'display:none;' : '';
+                    const details = this.monthlyDetailsCache[m.month];
 
-                    // Whatnot/Auction Income
-                    html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="color:#666;font-size:12px;${hideD}">`;
-                    html += `<td style="padding-left:72px;">Auction Income</td>`;
-                    html += `<td style="text-align:right">${m.auction_count}</td>`;
-                    html += `<td style="text-align:right">${cur(m.total_earnings)}</td>`;
-                    html += `<td style="text-align:right">${cur(m.total_fees)}</td>`;
-                    html += `<td style="text-align:right">${cur(m.total_item_costs)}</td>`;
-                    html += '<td></td><td></td><td></td><td></td>';
-                    const aucNet = m.auction_net != null ? m.auction_net : (m.total_item_price - m.total_fees - m.total_item_costs);
-                    html += `<td style="text-align:right">${cur(aucNet)}</td>`;
-                    html += '</tr>';
-
-                    // General Expenses
-                    if (m.total_general_costs > 0) {
-                        html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="color:#666;font-size:12px;${hideD}">`;
-                        html += `<td style="padding-left:72px;">General Expenses</td>`;
-                        html += '<td></td><td></td><td></td><td></td>';
-                        html += `<td style="text-align:right">${cur(m.total_general_costs)}</td>`;
-                        html += '<td></td><td></td><td></td>';
-                        html += `<td style="text-align:right;color:#e53935;">-${cur(m.total_general_costs)}</td>`;
+                    if (monthExpanded && !details && !this.loadingDetails[m.month]) {
+                        // Need to fetch — show loading row, then fetch
+                        html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="font-size:12px;${hideD}">`;
+                        html += `<td colspan="10" style="padding-left:72px;color:#888;font-style:italic;">Loading details...</td>`;
                         html += '</tr>';
-                    }
-
-                    // PayPal Costs (purchases are negative)
-                    if (m.pp_purchases !== 0 || m.pp_income !== 0 || m.pp_refunds !== 0) {
-                        html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="color:#666;font-size:12px;${hideD}">`;
-                        html += `<td style="padding-left:72px;">PayPal Activity</td>`;
-                        html += '<td></td><td></td><td></td><td></td><td></td>';
-                        html += `<td style="text-align:right">${cur(m.pp_purchases)}</td>`;
-                        html += `<td style="text-align:right">${cur(m.pp_income)}</td>`;
-                        html += '<td></td>';
-                        html += `<td style="text-align:right">${cur(m.pp_purchases + m.pp_income + m.pp_refunds)}</td>`;
+                    } else if (details && details.length === 0) {
+                        html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="font-size:12px;${hideD}">`;
+                        html += `<td colspan="10" style="padding-left:72px;color:#888;font-style:italic;">No detail records for this month.</td>`;
                         html += '</tr>';
-                    }
+                    } else if (details) {
+                        details.forEach(rec => {
+                            const dateLabel = fmtDate(rec.date);
+                            const srcBadge = this._sourceBadge(rec.source, rec.category);
+                            const desc = this._escHtml(rec.description || '');
 
-                    // Payouts
-                    if (m.total_payouts > 0) {
-                        html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="color:#666;font-size:12px;${hideD}">`;
-                        html += `<td style="padding-left:72px;">Payouts Received</td>`;
-                        html += '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                        html += `<td style="text-align:right">${cur(m.total_payouts)}</td>`;
-                        html += `<td style="text-align:right;color:#2e7d32;">${cur(m.total_payouts)}</td>`;
-                        html += '</tr>';
+                            html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="font-size:12px;${hideD}">`;
+                            html += `<td style="padding-left:72px;">${dateLabel} ${srcBadge} ${desc}</td>`;
+
+                            // Place amount in the correct column based on source
+                            if (rec.source === 'general_cost') {
+                                html += '<td></td><td></td><td></td><td></td>';
+                                html += `<td style="text-align:right;color:#e53935;">${cur(rec.amount)}</td>`;
+                                html += '<td></td><td></td><td></td>';
+                                html += `<td style="text-align:right;color:#e53935;">-${cur(rec.amount)}</td>`;
+                            } else if (rec.source === 'paypal') {
+                                html += '<td></td><td></td><td></td><td></td><td></td>';
+                                if (rec.category === 'purchase') {
+                                    html += `<td style="text-align:right;color:#e53935;">${cur(rec.amount)}</td>`;
+                                    html += '<td></td><td></td>';
+                                    html += `<td style="text-align:right;color:#e53935;">${cur(rec.amount)}</td>`;
+                                } else if (rec.category === 'income') {
+                                    html += '<td></td>';
+                                    html += `<td style="text-align:right;color:#2e7d32;">${cur(rec.amount)}</td>`;
+                                    html += '<td></td>';
+                                    html += `<td style="text-align:right;color:#2e7d32;">${cur(rec.amount)}</td>`;
+                                } else if (rec.category === 'refund') {
+                                    html += `<td style="text-align:right;color:#ef6c00;">${cur(rec.amount)}</td>`;
+                                    html += '<td></td><td></td>';
+                                    html += `<td style="text-align:right;color:#ef6c00;">${cur(rec.amount)}</td>`;
+                                } else {
+                                    html += '<td></td><td></td><td></td>';
+                                    html += `<td style="text-align:right">${cur(rec.amount)}</td>`;
+                                }
+                            } else if (rec.source === 'payout') {
+                                html += '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                html += `<td style="text-align:right;color:#2e7d32;">${cur(rec.amount)}</td>`;
+                                html += `<td style="text-align:right;color:#2e7d32;">${cur(rec.amount)}</td>`;
+                            } else {
+                                html += '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            }
+                            html += '</tr>';
+                        });
                     }
                 });
             });
@@ -545,6 +563,13 @@ const FinancialSummary = {
             row.addEventListener('click', () => {
                 const key = row.getAttribute('data-toggle');
                 this.collapsed[key] = !this.collapsed[key];
+
+                // If expanding a month (key starts with 'm-'), fetch details
+                if (key.startsWith('m-') && !this.collapsed[key]) {
+                    const month = key.substring(2);
+                    this._fetchMonthDetails(month);
+                }
+
                 this.renderMonthly();
             });
         });
@@ -552,6 +577,12 @@ const FinancialSummary = {
         // Expand/Collapse All
         document.getElementById('fs-expand-all').addEventListener('click', () => {
             this.collapsed = {};
+            // Fetch details for all months that aren't cached
+            data.forEach(m => {
+                if (!this.monthlyDetailsCache[m.month]) {
+                    this._fetchMonthDetails(m.month);
+                }
+            });
             this.renderMonthly();
         });
         document.getElementById('fs-collapse-all').addEventListener('click', () => {
@@ -560,6 +591,51 @@ const FinancialSummary = {
             });
             this.renderMonthly();
         });
+
+        // Trigger fetches for any expanded months that need data
+        data.forEach(m => {
+            if (!this.collapsed['m-' + m.month] && !this.monthlyDetailsCache[m.month] && !this.loadingDetails[m.month]) {
+                this._fetchMonthDetails(m.month);
+            }
+        });
+    },
+
+    async _fetchMonthDetails(month) {
+        if (this.monthlyDetailsCache[month] || this.loadingDetails[month]) return;
+        this.loadingDetails[month] = true;
+        try {
+            const result = await API.get('/api/financial-summary/monthly-details', { month });
+            this.monthlyDetailsCache[month] = result.records || [];
+        } catch (err) {
+            this.monthlyDetailsCache[month] = [];
+            console.error('Failed to load details for ' + month, err);
+        } finally {
+            delete this.loadingDetails[month];
+            this.renderMonthly();
+        }
+    },
+
+    _sourceBadge(source, category) {
+        const badges = {
+            general_cost: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#ffebee;color:#c62828;margin:0 4px;">COST</span>',
+            payout: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#e8f5e9;color:#2e7d32;margin:0 4px;">PAYOUT</span>',
+        };
+        if (source === 'paypal') {
+            const catLabels = {
+                purchase: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#fff3e0;color:#e65100;margin:0 4px;">PP-BUY</span>',
+                income: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#e8f5e9;color:#2e7d32;margin:0 4px;">PP-IN</span>',
+                refund: '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#fce4ec;color:#ad1457;margin:0 4px;">PP-REFUND</span>',
+            };
+            return catLabels[category] || '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#e3f2fd;color:#1565c0;margin:0 4px;">PAYPAL</span>';
+        }
+        return badges[source] || '';
+    },
+
+    _escHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     },
 
     _emptyTotals() {

@@ -51,6 +51,7 @@ $router->get('/api/top-buyers', ['TopBuyersController', 'index']);
 // === Financial Summary ===
 $router->get('/api/financial-summary/overview', ['FinancialSummaryController', 'overview']);
 $router->get('/api/financial-summary/monthly', ['FinancialSummaryController', 'monthly']);
+$router->get('/api/financial-summary/monthly-details', ['FinancialSummaryController', 'monthlyDetails']);
 $router->get('/api/financial-summary/costs', ['FinancialSummaryController', 'listCosts']);
 $router->post('/api/financial-summary/costs', ['FinancialSummaryController', 'createCost']);
 $router->put('/api/financial-summary/costs/{id}', ['FinancialSummaryController', 'updateCost']);

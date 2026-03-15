@@ -388,6 +388,96 @@ class FinancialSummaryController
     }
 
     /**
+     * GET /api/financial-summary/monthly-details?month=YYYY-MM
+     * Returns individual dated records for a given month:
+     *   - General costs (expenses)
+     *   - PayPal transactions (purchases/refunds/income)
+     *   - Payouts received
+     */
+    public function monthlyDetails(array $params = []): void
+    {
+        $month = $_GET['month'] ?? '';
+        if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
+            jsonError('Invalid month format. Use YYYY-MM.', 400);
+        }
+
+        $pdo = cg_db();
+        $startDate = $month . '-01';
+        $endDate = date('Y-m-t', strtotime($startDate));
+        $records = [];
+
+        // General costs
+        $stmt = $pdo->prepare(
+            "SELECT cost_date, description, total AS amount
+             FROM CG_GeneralCosts
+             WHERE cost_date BETWEEN :start AND :end
+             ORDER BY cost_date"
+        );
+        $stmt->execute([':start' => $startDate, ':end' => $endDate]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $records[] = [
+                'date'        => $row['cost_date'],
+                'source'      => 'general_cost',
+                'description' => $row['description'],
+                'amount'      => round((float) $row['amount'], 2),
+            ];
+        }
+
+        // PayPal transactions (purchase/refund/income)
+        $stmt = $pdo->prepare(
+            "SELECT transaction_date, name, type, charge_category, amount, fees, net_amount
+             FROM CG_PayPalTransactions
+             WHERE transaction_date BETWEEN :start AND :end
+               AND charge_category IN ('purchase', 'refund', 'income')
+             ORDER BY transaction_date"
+        );
+        $stmt->execute([':start' => $startDate, ':end' => $endDate]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $desc = $row['name'] ?: $row['type'];
+            if ($row['name'] && $row['type']) {
+                $desc = $row['name'] . ' (' . $row['type'] . ')';
+            }
+            $records[] = [
+                'date'        => $row['transaction_date'],
+                'source'      => 'paypal',
+                'category'    => $row['charge_category'],
+                'description' => $desc,
+                'amount'      => round((float) $row['amount'], 2),
+                'fees'        => round((float) $row['fees'], 2),
+            ];
+        }
+
+        // Payouts
+        $stmt = $pdo->prepare(
+            "SELECT date_initiated, amount, destination, notes
+             FROM CG_Payouts
+             WHERE status != 'Failed'
+               AND date_initiated BETWEEN :start AND :end
+             ORDER BY date_initiated"
+        );
+        $stmt->execute([':start' => $startDate, ':end' => $endDate]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $desc = 'Payout';
+            if ($row['destination']) {
+                $desc .= ' to ' . $row['destination'];
+            }
+            $records[] = [
+                'date'        => $row['date_initiated'],
+                'source'      => 'payout',
+                'description' => $desc,
+                'amount'      => round((float) $row['amount'], 2),
+            ];
+        }
+
+        // Sort all by date
+        usort($records, function ($a, $b) {
+            return strcmp($a['date'], $b['date']);
+        });
+
+        jsonResponse(['month' => $month, 'records' => $records]);
+    }
+
+    /**
      * GET /api/financial-summary/costs
      */
     public function listCosts(array $params = []): void
