@@ -2250,8 +2250,58 @@ var Mlb = {
     },
 
     renderMilbPostseason: function(container, data) {
-        var series = data.series || [];
-        if (series.length === 0) {
+        if (!data.hasStarted) {
+            container.innerHTML = '<p class="text-muted" style="padding:24px;">No postseason data available for ' + (data.season || '') + '</p>';
+            return;
+        }
+
+        var rounds = data.rounds;
+        if (!rounds) {
+            container.innerHTML = '<p class="text-muted" style="padding:24px;">No postseason data available for ' + (data.season || '') + '</p>';
+            return;
+        }
+
+        // Flatten rounds into a displayable list of series matchups
+        var sections = [];
+        var roundDefs = [
+            { key: 'wildCard', label: 'Wild Card', hasLeagues: true, isList: true },
+            { key: 'divSeries', label: 'Division Series', hasLeagues: true, isList: true },
+            { key: 'lcs', label: 'League Championship', hasLeagues: true, isList: false },
+            { key: 'worldSeries', label: 'Championship', hasLeagues: false, isList: false }
+        ];
+
+        for (var r = 0; r < roundDefs.length; r++) {
+            var rd = roundDefs[r];
+            var roundData = rounds[rd.key];
+            if (!roundData) continue;
+
+            var matchups = [];
+
+            if (!rd.hasLeagues) {
+                // Single series (e.g., worldSeries)
+                if (roundData && roundData.topTeam) matchups.push(roundData);
+            } else if (rd.isList) {
+                // Array per league (wildCard, divSeries)
+                var leagues = ['AL', 'NL'];
+                for (var li = 0; li < leagues.length; li++) {
+                    var leagueArr = roundData[leagues[li]] || [];
+                    for (var mi = 0; mi < leagueArr.length; mi++) {
+                        if (leagueArr[mi] && leagueArr[mi].topTeam) matchups.push(leagueArr[mi]);
+                    }
+                }
+            } else {
+                // Single per league (lcs)
+                var leagues2 = ['AL', 'NL'];
+                for (var li2 = 0; li2 < leagues2.length; li2++) {
+                    var s = roundData[leagues2[li2]];
+                    if (s && s.topTeam) matchups.push(s);
+                }
+            }
+
+            if (matchups.length > 0) sections.push({ label: rd.label, matchups: matchups });
+        }
+
+        if (sections.length === 0) {
             container.innerHTML = '<p class="text-muted" style="padding:24px;">No postseason data available for ' + (data.season || '') + '</p>';
             return;
         }
@@ -2259,16 +2309,13 @@ var Mlb = {
         var h = [];
         h.push('<h3 style="margin:16px 0;">' + (data.season || '') + ' Postseason</h3>');
 
-        for (var i = 0; i < series.length; i++) {
-            var s = series[i];
-            if (!s.matchups || s.matchups.length === 0) continue;
-
+        for (var i = 0; i < sections.length; i++) {
+            var sec = sections[i];
             h.push('<div style="margin-bottom:16px;">');
-            h.push('<h4 style="margin:8px 0;color:#555;">' + this.escHtml(s.roundName || s.gameType || '') + '</h4>');
+            h.push('<h4 style="margin:8px 0;color:#555;">' + this.escHtml(sec.label) + '</h4>');
             h.push('<div class="mlb-games-grid">');
-            for (var j = 0; j < s.matchups.length; j++) {
-                var m = s.matchups[j];
-                h.push(this.renderMilbMatchup(m));
+            for (var j = 0; j < sec.matchups.length; j++) {
+                h.push(this.renderMilbMatchup(sec.matchups[j]));
             }
             h.push('</div></div>');
         }
@@ -2276,22 +2323,25 @@ var Mlb = {
         container.innerHTML = h.join('');
     },
 
-    renderMilbMatchup: function(matchup) {
+    renderMilbMatchup: function(series) {
         var h = [];
         h.push('<div class="mlb-game-card" style="cursor:default;">');
-        h.push('<div class="mlb-game-status"><span class="mlb-status-text">' + this.escHtml(matchup.seriesStatus || '') + '</span></div>');
+        var statusText = series.description || (series.status === 'complete' ? 'Final' : 'In Progress');
+        h.push('<div class="mlb-game-status"><span class="mlb-status-text">' + this.escHtml(statusText) + '</span></div>');
 
-        var teams = [matchup.away, matchup.home];
+        var teams = [
+            { team: series.topTeam, wins: series.topWins, isWinner: series.winnerId && series.topTeam && series.winnerId === series.topTeam.mlb_id },
+            { team: series.bottomTeam, wins: series.bottomWins, isWinner: series.winnerId && series.bottomTeam && series.winnerId === series.bottomTeam.mlb_id }
+        ];
         for (var i = 0; i < teams.length; i++) {
-            var t = teams[i];
+            var t = teams[i].team;
             if (!t) continue;
-            var isWinner = t.wins > (i === 0 ? (matchup.home ? matchup.home.wins : 0) : (matchup.away ? matchup.away.wins : 0));
-            h.push('<div class="mlb-team-row' + (isWinner ? ' mlb-winner' : '') + '">');
+            h.push('<div class="mlb-team-row' + (teams[i].isWinner ? ' mlb-winner' : '') + '">');
             if (t.logoUrl) {
                 h.push('<img class="mlb-team-logo" src="' + t.logoUrl + '" alt="" onerror="this.style.display=\'none\'">');
             }
             h.push('<span class="mlb-team-name">' + this.escHtml(t.abbreviation || t.name || '') + '</span>');
-            h.push('<span class="mlb-team-score">' + (t.wins !== undefined ? t.wins : '') + '</span>');
+            h.push('<span class="mlb-team-score">' + teams[i].wins + '</span>');
             h.push('</div>');
         }
 

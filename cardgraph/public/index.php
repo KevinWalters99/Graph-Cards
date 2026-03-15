@@ -221,6 +221,7 @@ $router->get('/api/milb/teams',           ['MlbController', 'getMilbTeams']);
 
 // === Maintenance ===
 $router->get('/api/maintenance/upload-log', ['MaintenanceController', 'uploadLog']);
+$router->get('/api/maintenance/table-structures', ['MaintenanceController', 'tableStructures']);
 
 // === Health check (no auth) ===
 $router->get('/api/health', ['MaintenanceController', 'health'], false);

@@ -570,30 +570,41 @@ class AnalyticsController
         }
         unset($row);
 
-        // Detect likely-incomplete recent months: if the last completed month's
-        // total_sales is below 30% of the average of the prior 3 completed months,
-        // flag it as partial to prevent it from dragging down the forecast trend.
+        // Detect likely-incomplete recent months: check last 2 completed months.
+        // If total_sales OR items_sold is below 50% of the prior 3-month average,
+        // flag as partial to prevent dragging down the forecast trend.
         $completed = array_values(array_filter($monthly, fn($r) => !$r['is_partial']));
         $cCount = count($completed);
         if ($cCount >= 4) {
-            $last = $completed[$cCount - 1];
-            $priorAvg = 0;
-            for ($i = $cCount - 4; $i < $cCount - 1; $i++) {
-                $priorAvg += (float)$completed[$i]['total_sales'];
-            }
-            $priorAvg /= 3;
-            if ($priorAvg > 0 && (float)$last['total_sales'] < $priorAvg * 0.30) {
-                // Re-flag this month as partial with days_elapsed = days_in_month
-                // (indicates fully elapsed but data not yet imported)
-                foreach ($monthly as &$row) {
-                    if ($row['period'] === $last['period']) {
-                        $row['is_partial'] = true;
-                        $periodDate = $row['period'] . '-01';
-                        $row['days_elapsed'] = (int) date('t', strtotime($periodDate));
-                        $row['days_in_month'] = $row['days_elapsed'];
-                    }
+            // Check last 2 completed months for incomplete data
+            for ($checkIdx = $cCount - 1; $checkIdx >= max(0, $cCount - 2); $checkIdx--) {
+                $check = $completed[$checkIdx];
+                // Need at least 3 prior months to compare against
+                if ($checkIdx < 3) break;
+
+                $priorSalesAvg = 0;
+                $priorItemsAvg = 0;
+                for ($i = $checkIdx - 3; $i < $checkIdx; $i++) {
+                    $priorSalesAvg += (float)$completed[$i]['total_sales'];
+                    $priorItemsAvg += (int)$completed[$i]['items_sold'];
                 }
-                unset($row);
+                $priorSalesAvg /= 3;
+                $priorItemsAvg /= 3;
+
+                $isLow = ($priorSalesAvg > 0 && (float)$check['total_sales'] < $priorSalesAvg * 0.50)
+                      || ($priorItemsAvg > 0 && (int)$check['items_sold'] < $priorItemsAvg * 0.50);
+
+                if ($isLow) {
+                    foreach ($monthly as &$row) {
+                        if ($row['period'] === $check['period']) {
+                            $row['is_partial'] = true;
+                            $periodDate = $row['period'] . '-01';
+                            $row['days_elapsed'] = (int) date('t', strtotime($periodDate));
+                            $row['days_in_month'] = $row['days_elapsed'];
+                        }
+                    }
+                    unset($row);
+                }
             }
         }
 

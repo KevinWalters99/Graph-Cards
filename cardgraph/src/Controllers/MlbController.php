@@ -33,10 +33,11 @@ class MlbController
         Auth::getUserId();
 
         $centerDate = $_GET['date'] ?? date('Y-m-d');
+        $sportId    = (int)($_GET['sport_id'] ?? 1);
         $yesterday  = date('Y-m-d', strtotime($centerDate . ' -1 day'));
         $tomorrow   = date('Y-m-d', strtotime($centerDate . ' +1 day'));
 
-        $cacheKey = "mlb_schedule_{$yesterday}_{$tomorrow}";
+        $cacheKey = "mlb_schedule_{$sportId}_{$yesterday}_{$tomorrow}";
         $cached   = $this->getCache($cacheKey);
 
         // Use shorter TTL if live games detected
@@ -45,7 +46,7 @@ class MlbController
 
         if (!$cached || $this->isCacheExpired($cacheKey, $ttl)) {
             $url = "https://statsapi.mlb.com/api/v1/schedule"
-                 . "?sportId=1&startDate={$yesterday}&endDate={$tomorrow}"
+                 . "?sportId={$sportId}&startDate={$yesterday}&endDate={$tomorrow}"
                  . "&hydrate=broadcasts(all),linescore,team";
 
             try {
@@ -168,7 +169,7 @@ class MlbController
         Auth::getUserId();
 
         $teamId = (int)($_GET['team_id'] ?? 145);
-        if ($teamId < 100 || $teamId > 999) {
+        if ($teamId < 100 || $teamId > 99999) {
             jsonError('Invalid team ID', 400);
             return;
         }
@@ -227,7 +228,7 @@ class MlbController
         Auth::getUserId();
 
         $teamId = (int)($_GET['team_id'] ?? 145);
-        if ($teamId < 100 || $teamId > 999) {
+        if ($teamId < 100 || $teamId > 99999) {
             jsonError('Invalid team ID', 400);
             return;
         }

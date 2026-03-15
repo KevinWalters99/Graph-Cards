@@ -198,24 +198,60 @@ class PayPalCsvParser
     private function classifyType(string $type, float $amount): string
     {
         $map = [
+            // Purchases (money out for goods/services/shipping)
             'PreApproved Payment Bill User Payment' => 'purchase',
             'Express Checkout Payment'              => 'purchase',
             'Website Payment'                       => 'purchase',
             'Postage Payment'                       => 'purchase',
+            'Subscription Payment'                  => 'purchase',
+            'eBay Auction Payment'                  => 'purchase',
+            'Payment'                               => 'purchase',
+            'Recurring Payment'                     => 'purchase',
+            'Automatic Payment'                     => 'purchase',
+
+            // Refunds
             'Payment Refund'                        => 'refund',
+            'Refund'                                => 'refund',
+            'Payment Reversal'                      => 'refund',
+            'Buyer Complaint'                       => 'refund',
+            'Chargeback'                            => 'refund',
+
+            // Income (money received)
             'Mass Pay Payment'                      => 'income',
+            'General Payment'                       => 'income',
+            'Invoice Received'                      => 'income',
+            'Request Received'                      => 'income',
+
+            // Offsets (neutral transfers)
             'General Card Deposit'                  => 'offset',
             'Bank Deposit to PP Account'            => 'offset',
+            'Transfer'                              => 'offset',
+            'Currency Conversion'                   => 'offset',
+            'Balance Adjustment'                    => 'offset',
+
+            // Auth holds
             'General Authorization'                 => 'auth',
+            'Authorization'                         => 'auth',
+
+            // Withdrawals
             'General Card Withdrawal'               => 'withdrawal',
             'User Initiated Withdrawal'             => 'withdrawal',
+            'Withdraw Funds to a Bank Account'      => 'withdrawal',
+            'AutoSweep'                             => 'withdrawal',
         ];
 
         if ($type === 'Mobile Payment') {
             return $amount < 0 ? 'purchase' : 'income';
         }
 
-        return $map[$type] ?? 'offset';
+        // Fallback: use amount sign to infer category for unknown types
+        if (!isset($map[$type])) {
+            if ($amount < 0) return 'purchase';
+            if ($amount > 0) return 'income';
+            return 'offset';
+        }
+
+        return $map[$type];
     }
 
     /**

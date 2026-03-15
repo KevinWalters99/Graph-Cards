@@ -35,3 +35,5 @@ This tool should help verify that data is being properly stored and used within 
 Whenever a new table is created, it must also be documented within this structure view.
 
 The goal is to maintain complete visibility and documentation of the database schema to ensure consistency and data integrity across the application.
+
+Keep this section concise so it fits within a single column rather than occupying the full screen—ideally around half the width (roughly 60/40 if needed). Use the remaining space to display a simple text-style SQL table diagram showing the hierarchy and relationships between tables. For example, the Teams table as the parent, with related tables such as team hierarchy and team statistics branching from it. The diagram doesn’t need to be graphical—plain text is sufficient as long as it clearly shows parent-child relationships and the overall table structure.
