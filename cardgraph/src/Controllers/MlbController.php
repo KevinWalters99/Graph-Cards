@@ -279,6 +279,435 @@ class MlbController
         jsonResponse(['affiliates' => $affiliates]);
     }
 
+    // ─── Team Roster ──────────────────────────────────────────
+
+    public function getTeamRoster(array $params = []): void
+    {
+        Auth::getUserId();
+
+        $teamId = (int)($_GET['team_id'] ?? 0);
+        if ($teamId < 100) {
+            jsonError('Invalid team ID', 400);
+            return;
+        }
+
+        $season = date('Y');
+        $cacheKey = "mlb_roster_{$teamId}_{$season}";
+        $apiData  = $this->getCache($cacheKey);
+
+        if (!$apiData || $this->isCacheExpired($cacheKey, self::PROFILE_TTL)) {
+            $url = "https://statsapi.mlb.com/api/v1/teams/{$teamId}/roster"
+                 . "?rosterType=active&season={$season}"
+                 . "&hydrate=person(stats(type=season))";
+            try {
+                $json    = $this->mlbApiFetch($url);
+                $apiData = json_decode($json, true);
+                $this->setCache($cacheKey, $apiData);
+            } catch (\Throwable $e) {
+                if (!$apiData) {
+                    jsonResponse(['roster' => []]);
+                    return;
+                }
+            }
+        }
+
+        $roster = [];
+        foreach ($apiData['roster'] ?? [] as $entry) {
+            $person   = $entry['person'] ?? [];
+            $position = $entry['position'] ?? [];
+            $posType  = $position['type'] ?? '';
+
+            $stats = [];
+            $seasonStats = $person['stats'] ?? [];
+            foreach ($seasonStats as $statGroup) {
+                if (($statGroup['type']['displayName'] ?? '') === 'season') {
+                    $splits = $statGroup['splits'] ?? [];
+                    if (!empty($splits)) {
+                        $stats = end($splits)['stat'] ?? [];
+                    }
+                    break;
+                }
+            }
+
+            $player = [
+                'name'     => $person['fullName'] ?? '',
+                'number'   => $entry['jerseyNumber'] ?? '',
+                'position' => $position['abbreviation'] ?? '',
+                'posType'  => $posType === 'Pitcher' ? 'Pitcher' : 'Position',
+                'bats'     => $person['batSide']['code'] ?? '',
+                'throws'   => $person['pitchHand']['code'] ?? '',
+                'batSide'  => $person['batSide']['code'] ?? '',
+                'throwHand'=> $person['pitchHand']['code'] ?? '',
+                'age'      => $person['currentAge'] ?? null,
+            ];
+
+            if ($posType === 'Pitcher') {
+                $player['stats'] = [
+                    'era'            => $stats['era'] ?? '-',
+                    'wins'           => (int)($stats['wins'] ?? 0),
+                    'losses'         => (int)($stats['losses'] ?? 0),
+                    'strikeOuts'     => (int)($stats['strikeOuts'] ?? 0),
+                    'inningsPitched' => $stats['inningsPitched'] ?? '-',
+                ];
+            } else {
+                $player['stats'] = [
+                    'avg'      => $stats['avg'] ?? '-',
+                    'homeRuns' => (int)($stats['homeRuns'] ?? 0),
+                    'rbi'      => (int)($stats['rbi'] ?? 0),
+                    'ops'      => $stats['ops'] ?? '-',
+                ];
+            }
+
+            $roster[] = $player;
+        }
+
+        jsonResponse(['roster' => $roster]);
+    }
+
+    // ─── Wild Card Standings ────────────────────────────────────
+
+    public function getWildCard(array $params = []): void
+    {
+        Auth::getUserId();
+
+        $season   = (int)($_GET['season'] ?? date('Y'));
+        $cacheKey = "mlb_wildcard_{$season}";
+        $apiData  = $this->getCache($cacheKey);
+
+        if (!$apiData || $this->isCacheExpired($cacheKey, self::SCHEDULE_TTL)) {
+            $url = "https://statsapi.mlb.com/api/v1/standings"
+                 . "?leagueId=103,104&season={$season}"
+                 . "&standingsTypes=wildCard&hydrate=team";
+            try {
+                $json    = $this->mlbApiFetch($url);
+                $apiData = json_decode($json, true);
+                $this->setCache($cacheKey, $apiData);
+            } catch (\Throwable $e) {
+                if (!$apiData) {
+                    jsonResponse(['standings' => []]);
+                    return;
+                }
+            }
+        }
+
+        $leagues = [];
+        foreach ($apiData['records'] ?? [] as $record) {
+            $leagueName = $record['league']['name'] ?? 'Unknown';
+            $teams = [];
+            foreach ($record['teamRecords'] ?? [] as $tr) {
+                $team = $tr['team'] ?? [];
+                $teams[] = [
+                    'name'       => $team['name'] ?? '',
+                    'mlb_id'     => (int)($team['id'] ?? 0),
+                    'logoUrl'    => '/img/teams/' . ($team['id'] ?? 0) . '.png',
+                    'wins'       => (int)($tr['wins'] ?? 0),
+                    'losses'     => (int)($tr['losses'] ?? 0),
+                    'pct'        => $tr['leagueRecord']['pct'] ?? ($tr['winningPercentage'] ?? '.000'),
+                    'gb'         => $tr['wildCardGamesBack'] ?? '-',
+                    'streak'     => $tr['streak']['streakCode'] ?? '-',
+                    'wcRank'     => (int)($tr['wildCardRank'] ?? 99),
+                    'eliminated' => (bool)($tr['wildCardEliminationNumber'] ?? '') === 'E'
+                        || (isset($tr['clinched']) && !$tr['clinched'] && (int)($tr['eliminationNumber'] ?? 1) === 0),
+                ];
+            }
+            usort($teams, fn($a, $b) => $a['wcRank'] - $b['wcRank']);
+            $leagues[] = ['league' => $leagueName, 'teams' => $teams];
+        }
+
+        jsonResponse(['standings' => $leagues]);
+    }
+
+    // ─── Postseason Bracket ─────────────────────────────────────
+
+    public function getPostseason(array $params = []): void
+    {
+        Auth::getUserId();
+
+        $season  = (int)($_GET['season'] ?? date('Y'));
+        $sportId = (int)($_GET['sport_id'] ?? 1);
+        $cacheKey = "mlb_postseason_{$season}_{$sportId}";
+        $apiData  = $this->getCache($cacheKey);
+
+        if (!$apiData || $this->isCacheExpired($cacheKey, self::SCHEDULE_TTL)) {
+            $url = "https://statsapi.mlb.com/api/v1/schedule/postseason/series"
+                 . "?season={$season}&sportId={$sportId}"
+                 . "&hydrate=team,linescore";
+            try {
+                $json    = $this->mlbApiFetch($url);
+                $apiData = json_decode($json, true);
+                $this->setCache($cacheKey, $apiData);
+            } catch (\Throwable $e) {
+                if (!$apiData) {
+                    jsonResponse([
+                        'season'     => $season,
+                        'hasStarted' => false,
+                        'isComplete' => false,
+                        'rounds'     => null,
+                        'seeds'      => ['AL' => [], 'NL' => []],
+                        'playoffTeams' => ['AL' => [], 'NL' => []],
+                    ]);
+                    return;
+                }
+            }
+        }
+
+        $series = $apiData['series'] ?? [];
+        if (empty($series)) {
+            jsonResponse([
+                'season'     => $season,
+                'hasStarted' => false,
+                'isComplete' => false,
+                'rounds'     => null,
+                'seeds'      => ['AL' => [], 'NL' => []],
+                'playoffTeams' => ['AL' => [], 'NL' => []],
+            ]);
+            return;
+        }
+
+        // Map series by round
+        $roundMap = [
+            'F' => 'wildCard',
+            'D' => 'divSeries',
+            'L' => 'lcs',
+            'W' => 'worldSeries',
+        ];
+
+        $rounds = [
+            'wildCard' => ['AL' => [], 'NL' => []],
+            'divSeries' => ['AL' => [], 'NL' => []],
+            'lcs'       => ['AL' => null, 'NL' => null],
+            'worldSeries' => null,
+        ];
+
+        $seeds = ['AL' => [], 'NL' => []];
+        $playoffTeams = ['AL' => [], 'NL' => []];
+        $seenTeams = [];
+        $wsComplete = false;
+
+        foreach ($series as $s) {
+            $gameType = $s['series']['gameType'] ?? '';
+            $roundKey = $roundMap[$gameType] ?? null;
+            if (!$roundKey) continue;
+
+            $games = $s['games'] ?? [];
+            if (empty($games)) continue;
+
+            // Determine teams from first game with team data
+            $topTeam = null;
+            $bottomTeam = null;
+            $topWins = 0;
+            $bottomWins = 0;
+            $winnerId = null;
+
+            foreach ($games as $game) {
+                $away = $game['teams']['away']['team'] ?? [];
+                $home = $game['teams']['home']['team'] ?? [];
+
+                if (!$topTeam && !empty($away['id'])) {
+                    $topTeam = [
+                        'mlb_id'       => (int)$away['id'],
+                        'name'         => $away['name'] ?? '',
+                        'abbreviation' => $away['abbreviation'] ?? '',
+                        'logoUrl'      => '/img/teams/' . $away['id'] . '.png',
+                    ];
+                }
+                if (!$bottomTeam && !empty($home['id'])) {
+                    $bottomTeam = [
+                        'mlb_id'       => (int)$home['id'],
+                        'name'         => $home['name'] ?? '',
+                        'abbreviation' => $home['abbreviation'] ?? '',
+                        'logoUrl'      => '/img/teams/' . $home['id'] . '.png',
+                    ];
+                }
+
+                // Count wins
+                $status = $game['status']['abstractGameState'] ?? '';
+                if ($status === 'Final') {
+                    $aScore = (int)($game['teams']['away']['score'] ?? 0);
+                    $hScore = (int)($game['teams']['home']['score'] ?? 0);
+                    $awayId = (int)($game['teams']['away']['team']['id'] ?? 0);
+                    $homeId = (int)($game['teams']['home']['team']['id'] ?? 0);
+
+                    if ($topTeam && $awayId === $topTeam['mlb_id']) {
+                        if ($aScore > $hScore) $topWins++;
+                        else $bottomWins++;
+                    } elseif ($topTeam && $homeId === $topTeam['mlb_id']) {
+                        if ($hScore > $aScore) $topWins++;
+                        else $bottomWins++;
+                    }
+                }
+
+                // Track teams for league mapping
+                foreach ([$away, $home] as $t) {
+                    $tid = (int)($t['id'] ?? 0);
+                    if ($tid && !isset($seenTeams[$tid])) {
+                        $league = $t['league']['name'] ?? '';
+                        $leagueKey = (strpos($league, 'American') !== false) ? 'AL' : 'NL';
+                        $seenTeams[$tid] = $leagueKey;
+                        $playoffTeams[$leagueKey][] = [
+                            'mlb_id'       => $tid,
+                            'name'         => $t['name'] ?? '',
+                            'abbreviation' => $t['abbreviation'] ?? '',
+                            'logoUrl'      => '/img/teams/' . $tid . '.png',
+                        ];
+                    }
+                }
+            }
+
+            // Determine series winner
+            $seriesWins = (int)($s['series']['gameNumber'] ?? 0);
+            $totalGames = (int)($s['series']['totalGameNumber'] ?? 0);
+            if ($gameType === 'F') {
+                // Wild card is best of 3
+                if ($topWins >= 2) $winnerId = $topTeam['mlb_id'] ?? null;
+                elseif ($bottomWins >= 2) $winnerId = $bottomTeam['mlb_id'] ?? null;
+            } else {
+                // Division/LCS/WS are best of 5 or 7
+                $neededWins = ($gameType === 'D') ? 3 : 4;
+                if ($topWins >= $neededWins) $winnerId = $topTeam['mlb_id'] ?? null;
+                elseif ($bottomWins >= $neededWins) $winnerId = $bottomTeam['mlb_id'] ?? null;
+            }
+
+            $seriesData = [
+                'topTeam'     => $topTeam,
+                'bottomTeam'  => $bottomTeam,
+                'topWins'     => $topWins,
+                'bottomWins'  => $bottomWins,
+                'winnerId'    => $winnerId,
+                'status'      => $winnerId ? 'complete' : 'active',
+                'description' => $s['series']['description'] ?? '',
+            ];
+
+            // Figure out league
+            $league = 'AL';
+            if ($topTeam && isset($seenTeams[$topTeam['mlb_id']])) {
+                $league = $seenTeams[$topTeam['mlb_id']];
+            }
+
+            if ($roundKey === 'worldSeries') {
+                $rounds['worldSeries'] = $seriesData;
+                $wsComplete = !!$winnerId;
+            } elseif ($roundKey === 'lcs') {
+                $rounds['lcs'][$league] = $seriesData;
+            } else {
+                $rounds[$roundKey][$league][] = $seriesData;
+            }
+        }
+
+        jsonResponse([
+            'season'       => $season,
+            'hasStarted'   => true,
+            'isComplete'   => $wsComplete,
+            'rounds'       => $rounds,
+            'seeds'        => $seeds,
+            'playoffTeams' => $playoffTeams,
+        ]);
+    }
+
+    // ─── MiLB Standings ────────────────────────────────────────
+
+    public function getMilbStandings(array $params = []): void
+    {
+        Auth::getUserId();
+
+        $sportId = (int)($_GET['sport_id'] ?? 11);
+        $season  = (int)($_GET['season'] ?? date('Y'));
+        $cacheKey = "milb_standings_{$sportId}_{$season}";
+        $apiData  = $this->getCache($cacheKey);
+
+        if (!$apiData || $this->isCacheExpired($cacheKey, self::SCHEDULE_TTL)) {
+            $url = "https://statsapi.mlb.com/api/v1/standings"
+                 . "?leagueId=&season={$season}&sportId={$sportId}"
+                 . "&standingsTypes=regularSeason&hydrate=team";
+            try {
+                $json    = $this->mlbApiFetch($url);
+                $apiData = json_decode($json, true);
+                $this->setCache($cacheKey, $apiData);
+            } catch (\Throwable $e) {
+                if (!$apiData) {
+                    jsonResponse(['divisions' => []]);
+                    return;
+                }
+            }
+        }
+
+        $divisions = [];
+        foreach ($apiData['records'] ?? [] as $record) {
+            $divName = $record['division']['name'] ?? ($record['league']['name'] ?? 'Unknown');
+            $teams = [];
+            foreach ($record['teamRecords'] ?? [] as $tr) {
+                $team = $tr['team'] ?? [];
+                $teams[] = [
+                    'team_name'    => $team['name'] ?? '',
+                    'abbreviation' => $team['abbreviation'] ?? ($team['shortName'] ?? ''),
+                    'mlb_id'       => (int)($team['id'] ?? 0),
+                    'logoUrl'      => '/img/teams/' . ($team['id'] ?? 0) . '.png',
+                    'wins'         => (int)($tr['wins'] ?? 0),
+                    'losses'       => (int)($tr['losses'] ?? 0),
+                    'pct'          => $tr['leagueRecord']['pct'] ?? ($tr['winningPercentage'] ?? '.000'),
+                    'gb'           => $tr['gamesBack'] ?? '-',
+                    'streak'       => $tr['streak']['streakCode'] ?? '-',
+                    'runDiff'      => (int)($tr['runDifferential'] ?? 0),
+                    'divRank'      => (int)($tr['divisionRank'] ?? 0),
+                ];
+            }
+            usort($teams, fn($a, $b) => $a['divRank'] - $b['divRank']);
+            $divisions[$divName] = $teams;
+        }
+
+        jsonResponse(['divisions' => $divisions]);
+    }
+
+    // ─── MiLB Teams ────────────────────────────────────────────
+
+    public function getMilbTeams(array $params = []): void
+    {
+        Auth::getUserId();
+
+        $sportId = (int)($_GET['sport_id'] ?? 11);
+        $season  = (int)($_GET['season'] ?? date('Y'));
+        $cacheKey = "milb_teams_{$sportId}_{$season}";
+        $apiData  = $this->getCache($cacheKey);
+
+        if (!$apiData || $this->isCacheExpired($cacheKey, self::PROFILE_TTL)) {
+            $url = "https://statsapi.mlb.com/api/v1/teams"
+                 . "?sportId={$sportId}&season={$season}";
+            try {
+                $json    = $this->mlbApiFetch($url);
+                $apiData = json_decode($json, true);
+                $this->setCache($cacheKey, $apiData);
+            } catch (\Throwable $e) {
+                if (!$apiData) {
+                    jsonResponse(['teams' => []]);
+                    return;
+                }
+            }
+        }
+
+        $teams = [];
+        foreach ($apiData['teams'] ?? [] as $t) {
+            $parentOrg = $t['parentOrgName'] ?? '';
+            $parentId  = (int)($t['parentOrgId'] ?? 0);
+            $teams[] = [
+                'mlb_id'        => (int)($t['id'] ?? 0),
+                'name'          => $t['name'] ?? '',
+                'shortName'     => $t['shortName'] ?? ($t['name'] ?? ''),
+                'abbreviation'  => $t['abbreviation'] ?? '',
+                'league'        => $t['league']['name'] ?? '',
+                'division'      => $t['division']['name'] ?? '',
+                'venue'         => $t['venue']['name'] ?? '',
+                'logoUrl'       => '/img/teams/' . ($t['id'] ?? 0) . '.png',
+                'parentOrgName' => $parentOrg,
+                'parentOrgId'   => $parentId,
+                'parentLogoUrl' => $parentId ? "/img/teams/{$parentId}.png" : '',
+            ];
+        }
+
+        usort($teams, fn($a, $b) => strcmp($a['name'], $b['name']));
+
+        jsonResponse(['teams' => $teams]);
+    }
+
     // ─── Private Helpers ──────────────────────────────────────────
 
     private function getTeamMap(): array

@@ -651,4 +651,397 @@ class FinancialSummaryController
         }
         jsonResponse(['message' => 'Cost deleted']);
     }
+
+    // =========================================================
+    // Tax Preparation
+    // =========================================================
+
+    /**
+     * GET /api/financial-summary/tax-preview?year=YYYY
+     * Calculates quarterly + annual tax summary from existing financial data.
+     * Returns calculated values and any saved (draft/locked) records for the year.
+     */
+    public function taxPreview(array $params = []): void
+    {
+        try {
+            $year = (int) ($_GET['year'] ?? date('Y'));
+            if ($year < 2020 || $year > 2099) {
+                jsonError('Invalid year', 400);
+            }
+
+            $pdo = cg_db();
+
+            // Get excluded status IDs
+            $excludedStatuses = $pdo->query(
+                "SELECT status_type_id FROM CG_StatusTypes
+                 WHERE status_name IN ('Cancelled', 'Refused', 'Did Not Pay', 'Returned', 'Disputed')"
+            )->fetchAll(\PDO::FETCH_COLUMN);
+            $excludeList = implode(',', array_map('intval', $excludedStatuses));
+            $statusFilter = $excludeList ? "AND a.current_status_id NOT IN ({$excludeList})" : '';
+
+            $quarters = [];
+            for ($q = 1; $q <= 4; $q++) {
+                $qStartMonth = ($q - 1) * 3 + 1;
+                $qEndMonth = $q * 3;
+                $qStart = sprintf('%d-%02d-01', $year, $qStartMonth);
+                $qEnd = date('Y-m-t', strtotime(sprintf('%d-%02d-01', $year, $qEndMonth)));
+
+                // Payouts (income received)
+                $stmt = $pdo->prepare(
+                    "SELECT COALESCE(SUM(amount), 0) AS total_payouts
+                     FROM CG_Payouts WHERE status != 'Failed'
+                     AND date_initiated BETWEEN :qs AND :qe"
+                );
+                $stmt->execute([':qs' => $qStart, ':qe' => $qEnd]);
+                $totalPayouts = round((float) $stmt->fetchColumn(), 2);
+
+                // PayPal income
+                $stmt = $pdo->prepare(
+                    "SELECT COALESCE(SUM(CASE WHEN charge_category = 'income' THEN amount ELSE 0 END), 0) AS pp_income,
+                            COALESCE(SUM(CASE WHEN charge_category = 'purchase' THEN ABS(amount) ELSE 0 END), 0) AS pp_purchases
+                     FROM CG_PayPalTransactions
+                     WHERE transaction_date BETWEEN :qs AND :qe
+                       AND charge_category IN ('purchase', 'income')"
+                );
+                $stmt->execute([':qs' => $qStart, ':qe' => $qEnd]);
+                $ppRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $ppIncome = round((float) $ppRow['pp_income'], 2);
+                $ppPurchases = round((float) $ppRow['pp_purchases'], 2);
+
+                // Item costs (COGS)
+                $stmt = $pdo->prepare(
+                    "SELECT COALESCE(SUM(c.cost_amount), 0) AS total_item_costs
+                     FROM CG_ItemCosts c
+                     JOIN CG_AuctionLineItems a ON a.ledger_transaction_id = c.ledger_transaction_id
+                     WHERE a.order_placed_at BETWEEN :qs AND :qe
+                       {$statusFilter}"
+                );
+                $stmt->execute([':qs' => $qStart . ' 00:00:00', ':qe' => $qEnd . ' 23:59:59']);
+                $itemCosts = round((float) $stmt->fetchColumn(), 2);
+
+                // Platform fees + shipping
+                $stmt = $pdo->prepare(
+                    "SELECT COALESCE(SUM(
+                        COALESCE(a.commission_fee, 0) + COALESCE(a.payment_processing_fee, 0) +
+                        COALESCE(a.tax_on_commission_fee, 0) + COALESCE(a.tax_on_payment_processing_fee, 0)
+                    ), 0) AS platform_fees,
+                    COALESCE(SUM(a.shipping_fee), 0) AS shipping_costs
+                     FROM CG_AuctionLineItems a
+                     WHERE a.order_placed_at BETWEEN :qs AND :qe
+                       AND a.order_placed_at IS NOT NULL
+                       {$statusFilter}"
+                );
+                $stmt->execute([':qs' => $qStart . ' 00:00:00', ':qe' => $qEnd . ' 23:59:59']);
+                $feeRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $platformFees = round((float) $feeRow['platform_fees'], 2);
+                $shippingCosts = round((float) $feeRow['shipping_costs'], 2);
+
+                // General costs
+                $stmt = $pdo->prepare(
+                    "SELECT COALESCE(SUM(total), 0) AS total_general_costs
+                     FROM CG_GeneralCosts WHERE cost_date BETWEEN :qs AND :qe"
+                );
+                $stmt->execute([':qs' => $qStart, ':qe' => $qEnd]);
+                $generalCosts = round((float) $stmt->fetchColumn(), 2);
+
+                // Compute totals
+                $grossIncome = round($totalPayouts + $ppIncome, 2);
+                $totalCogs = round($itemCosts + $ppPurchases, 2);
+                $grossProfit = round($grossIncome - $totalCogs, 2);
+                $totalOperating = round($platformFees + $shippingCosts + $generalCosts, 2);
+
+                $quarters[$q] = [
+                    'quarter' => $q,
+                    'total_payouts' => $totalPayouts,
+                    'paypal_income' => $ppIncome,
+                    'gross_income' => $grossIncome,
+                    'item_costs' => $itemCosts,
+                    'paypal_purchases' => $ppPurchases,
+                    'total_cogs' => $totalCogs,
+                    'platform_fees' => $platformFees,
+                    'shipping_costs' => $shippingCosts,
+                    'general_costs' => $generalCosts,
+                    'total_operating' => $totalOperating,
+                    'gross_profit' => $grossProfit,
+                    'net_before_deductions' => round($grossProfit - $totalOperating, 2),
+                ];
+            }
+
+            // Annual totals
+            $annual = [
+                'total_payouts' => 0, 'paypal_income' => 0, 'gross_income' => 0,
+                'item_costs' => 0, 'paypal_purchases' => 0, 'total_cogs' => 0,
+                'platform_fees' => 0, 'shipping_costs' => 0, 'general_costs' => 0,
+                'total_operating' => 0, 'gross_profit' => 0, 'net_before_deductions' => 0,
+            ];
+            foreach ($quarters as $qd) {
+                foreach ($annual as $k => &$v) {
+                    if (isset($qd[$k])) $v = round($v + $qd[$k], 2);
+                }
+                unset($v);
+            }
+
+            // Fetch any saved tax records for this year
+            $stmt = $pdo->prepare(
+                "SELECT * FROM CG_TaxRecords WHERE tax_year = :yr ORDER BY tax_quarter ASC"
+            );
+            $stmt->execute([':yr' => $year]);
+            $savedRecords = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Cast numeric fields on saved records
+            foreach ($savedRecords as &$rec) {
+                $rec['tax_record_id'] = (int) $rec['tax_record_id'];
+                $rec['tax_year'] = (int) $rec['tax_year'];
+                $rec['tax_quarter'] = $rec['tax_quarter'] !== null ? (int) $rec['tax_quarter'] : null;
+                $rec['is_locked'] = (int) $rec['is_locked'];
+                foreach (['total_payouts','paypal_income','gross_income','item_costs','paypal_purchases',
+                          'total_cogs','platform_fees','shipping_costs','general_costs','total_operating',
+                          'phone_amount','phone_deduction','mileage_deduction','equipment_deduction',
+                          'supplies_deduction','advertising_deduction','other_deduction','total_deductions',
+                          'gross_profit','net_profit'] as $numField) {
+                    if (isset($rec[$numField])) $rec[$numField] = round((float) $rec[$numField], 2);
+                }
+                $rec['phone_pct'] = (int) ($rec['phone_pct'] ?? 0);
+                $rec['mileage_miles'] = round((float) ($rec['mileage_miles'] ?? 0), 1);
+                $rec['mileage_rate'] = round((float) ($rec['mileage_rate'] ?? 0.67), 3);
+            }
+            unset($rec);
+
+            // Available years (for dropdown)
+            $years = $pdo->query(
+                "SELECT DISTINCT YEAR(date_initiated) AS yr FROM CG_Payouts WHERE status != 'Failed'
+                 UNION
+                 SELECT DISTINCT YEAR(order_placed_at) FROM CG_AuctionLineItems WHERE order_placed_at IS NOT NULL
+                 ORDER BY yr DESC"
+            )->fetchAll(\PDO::FETCH_COLUMN);
+
+            jsonResponse([
+                'year' => $year,
+                'quarters' => array_values($quarters),
+                'annual' => $annual,
+                'saved_records' => $savedRecords,
+                'available_years' => array_map('intval', $years),
+            ]);
+        } catch (\Throwable $e) {
+            jsonError('Tax preview error: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * GET /api/financial-summary/tax-records
+     * Returns all saved tax records.
+     */
+    public function listTaxRecords(array $params = []): void
+    {
+        try {
+            $pdo = cg_db();
+            $rows = $pdo->query(
+                "SELECT tr.*, u.display_name AS created_by_name, lu.display_name AS locked_by_name
+                 FROM CG_TaxRecords tr
+                 JOIN CG_Users u ON u.user_id = tr.created_by
+                 LEFT JOIN CG_Users lu ON lu.user_id = tr.locked_by
+                 ORDER BY tr.tax_year DESC, tr.tax_quarter ASC"
+            )->fetchAll(\PDO::FETCH_ASSOC);
+
+            foreach ($rows as &$row) {
+                $row['tax_record_id'] = (int) $row['tax_record_id'];
+                $row['tax_year'] = (int) $row['tax_year'];
+                $row['tax_quarter'] = $row['tax_quarter'] !== null ? (int) $row['tax_quarter'] : null;
+                $row['is_locked'] = (int) $row['is_locked'];
+                $row['net_profit'] = round((float) $row['net_profit'], 2);
+                $row['gross_income'] = round((float) $row['gross_income'], 2);
+                $row['total_deductions'] = round((float) $row['total_deductions'], 2);
+            }
+            unset($row);
+
+            jsonResponse(['data' => $rows]);
+        } catch (\Throwable $e) {
+            jsonError('Tax records error: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /api/financial-summary/tax-records
+     * Save a tax record (draft). Checks for duplicate period.
+     */
+    public function saveTaxRecord(array $params = []): void
+    {
+        try {
+            $body = getJsonBody();
+            $user = Auth::getCurrentUser();
+
+            $year = (int) ($body['tax_year'] ?? 0);
+            $quarter = isset($body['tax_quarter']) && $body['tax_quarter'] !== null ? (int) $body['tax_quarter'] : null;
+            $periodType = $quarter ? 'quarterly' : 'annual';
+
+            if ($year < 2020 || $year > 2099) {
+                jsonError('Invalid year', 400);
+            }
+            if ($quarter !== null && ($quarter < 1 || $quarter > 4)) {
+                jsonError('Invalid quarter', 400);
+            }
+
+            $pdo = cg_db();
+
+            // Check for existing locked record
+            $stmt = $pdo->prepare(
+                "SELECT tax_record_id, is_locked FROM CG_TaxRecords
+                 WHERE tax_year = :yr AND (tax_quarter = :q OR (tax_quarter IS NULL AND :q IS NULL))
+                 AND period_type = :pt"
+            );
+            $stmt->execute([':yr' => $year, ':q' => $quarter, ':pt' => $periodType]);
+            $existing = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            if ($existing && (int) $existing['is_locked'] === 1) {
+                jsonError('This period is already locked and cannot be modified.', 409);
+            }
+
+            // Deduction calculations
+            $phoneAmount = round((float) ($body['phone_amount'] ?? 0), 2);
+            $phonePct = max(0, min(100, (int) ($body['phone_pct'] ?? 0)));
+            $phoneDeduction = round($phoneAmount * $phonePct / 100, 2);
+
+            $mileageMiles = round((float) ($body['mileage_miles'] ?? 0), 1);
+            $mileageRate = round((float) ($body['mileage_rate'] ?? 0.67), 3);
+            $mileageDeduction = round($mileageMiles * $mileageRate, 2);
+
+            $equipmentDeduction = round((float) ($body['equipment_deduction'] ?? 0), 2);
+            $suppliesDeduction = round((float) ($body['supplies_deduction'] ?? 0), 2);
+            $advertisingDeduction = round((float) ($body['advertising_deduction'] ?? 0), 2);
+            $otherDeduction = round((float) ($body['other_deduction'] ?? 0), 2);
+            $deductionNotes = trim($body['deduction_notes'] ?? '');
+
+            $totalDeductions = round(
+                $phoneDeduction + $mileageDeduction + $equipmentDeduction +
+                $suppliesDeduction + $advertisingDeduction + $otherDeduction, 2
+            );
+
+            // Financial figures (from preview calculation, passed from frontend)
+            $totalPayouts = round((float) ($body['total_payouts'] ?? 0), 2);
+            $paypalIncome = round((float) ($body['paypal_income'] ?? 0), 2);
+            $grossIncome = round($totalPayouts + $paypalIncome, 2);
+            $itemCosts = round((float) ($body['item_costs'] ?? 0), 2);
+            $ppPurchases = round((float) ($body['paypal_purchases'] ?? 0), 2);
+            $totalCogs = round($itemCosts + $ppPurchases, 2);
+            $platformFees = round((float) ($body['platform_fees'] ?? 0), 2);
+            $shippingCosts = round((float) ($body['shipping_costs'] ?? 0), 2);
+            $generalCosts = round((float) ($body['general_costs'] ?? 0), 2);
+            $totalOperating = round($platformFees + $shippingCosts + $generalCosts, 2);
+            $grossProfit = round($grossIncome - $totalCogs, 2);
+            $netProfit = round($grossProfit - $totalOperating - $totalDeductions, 2);
+
+            if ($existing) {
+                // Update existing draft
+                $stmt = $pdo->prepare(
+                    "UPDATE CG_TaxRecords SET
+                        total_payouts = :tp, paypal_income = :pi, gross_income = :gi,
+                        item_costs = :ic, paypal_purchases = :pp, total_cogs = :tc,
+                        platform_fees = :pf, shipping_costs = :sc, general_costs = :gc,
+                        total_operating = :to2,
+                        phone_amount = :pa, phone_pct = :ppct, phone_deduction = :pd,
+                        mileage_miles = :mm, mileage_rate = :mr, mileage_deduction = :md,
+                        equipment_deduction = :ed, supplies_deduction = :sd,
+                        advertising_deduction = :ad, other_deduction = :od,
+                        deduction_notes = :dn, total_deductions = :td,
+                        gross_profit = :gp, net_profit = :np
+                     WHERE tax_record_id = :id"
+                );
+                $stmt->execute([
+                    ':tp' => $totalPayouts, ':pi' => $paypalIncome, ':gi' => $grossIncome,
+                    ':ic' => $itemCosts, ':pp' => $ppPurchases, ':tc' => $totalCogs,
+                    ':pf' => $platformFees, ':sc' => $shippingCosts, ':gc' => $generalCosts,
+                    ':to2' => $totalOperating,
+                    ':pa' => $phoneAmount, ':ppct' => $phonePct, ':pd' => $phoneDeduction,
+                    ':mm' => $mileageMiles, ':mr' => $mileageRate, ':md' => $mileageDeduction,
+                    ':ed' => $equipmentDeduction, ':sd' => $suppliesDeduction,
+                    ':ad' => $advertisingDeduction, ':od' => $otherDeduction,
+                    ':dn' => $deductionNotes, ':td' => $totalDeductions,
+                    ':gp' => $grossProfit, ':np' => $netProfit,
+                    ':id' => $existing['tax_record_id'],
+                ]);
+                jsonResponse(['message' => 'Tax record updated', 'id' => (int) $existing['tax_record_id']]);
+            } else {
+                // Insert new record
+                $stmt = $pdo->prepare(
+                    "INSERT INTO CG_TaxRecords (
+                        tax_year, tax_quarter, period_type,
+                        total_payouts, paypal_income, gross_income,
+                        item_costs, paypal_purchases, total_cogs,
+                        platform_fees, shipping_costs, general_costs, total_operating,
+                        phone_amount, phone_pct, phone_deduction,
+                        mileage_miles, mileage_rate, mileage_deduction,
+                        equipment_deduction, supplies_deduction, advertising_deduction,
+                        other_deduction, deduction_notes, total_deductions,
+                        gross_profit, net_profit, created_by
+                     ) VALUES (
+                        :yr, :q, :pt,
+                        :tp, :pi, :gi,
+                        :ic, :pp, :tc,
+                        :pf, :sc, :gc, :to2,
+                        :pa, :ppct, :pd,
+                        :mm, :mr, :md,
+                        :ed, :sd, :ad,
+                        :od, :dn, :td,
+                        :gp, :np, :cb
+                     )"
+                );
+                $stmt->execute([
+                    ':yr' => $year, ':q' => $quarter, ':pt' => $periodType,
+                    ':tp' => $totalPayouts, ':pi' => $paypalIncome, ':gi' => $grossIncome,
+                    ':ic' => $itemCosts, ':pp' => $ppPurchases, ':tc' => $totalCogs,
+                    ':pf' => $platformFees, ':sc' => $shippingCosts, ':gc' => $generalCosts,
+                    ':to2' => $totalOperating,
+                    ':pa' => $phoneAmount, ':ppct' => $phonePct, ':pd' => $phoneDeduction,
+                    ':mm' => $mileageMiles, ':mr' => $mileageRate, ':md' => $mileageDeduction,
+                    ':ed' => $equipmentDeduction, ':sd' => $suppliesDeduction,
+                    ':ad' => $advertisingDeduction, ':od' => $otherDeduction,
+                    ':dn' => $deductionNotes, ':td' => $totalDeductions,
+                    ':gp' => $grossProfit, ':np' => $netProfit,
+                    ':cb' => $user['user_id'],
+                ]);
+                jsonResponse(['message' => 'Tax record saved', 'id' => (int) $pdo->lastInsertId()], 201);
+            }
+        } catch (\Throwable $e) {
+            jsonError('Tax save error: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * PUT /api/financial-summary/tax-records/{id}/lock
+     * Locks a tax record so it cannot be modified.
+     */
+    public function lockTaxRecord(array $params = []): void
+    {
+        try {
+            $id = (int) ($params['id'] ?? 0);
+            if ($id <= 0) {
+                jsonError('Invalid record ID', 400);
+            }
+
+            $pdo = cg_db();
+            $user = Auth::getCurrentUser();
+
+            // Check record exists and is not already locked
+            $stmt = $pdo->prepare("SELECT tax_record_id, is_locked FROM CG_TaxRecords WHERE tax_record_id = :id");
+            $stmt->execute([':id' => $id]);
+            $rec = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$rec) {
+                jsonError('Tax record not found', 404);
+            }
+            if ((int) $rec['is_locked'] === 1) {
+                jsonError('Record is already locked', 409);
+            }
+
+            $stmt = $pdo->prepare(
+                "UPDATE CG_TaxRecords SET is_locked = 1, locked_by = :lb, locked_at = NOW()
+                 WHERE tax_record_id = :id"
+            );
+            $stmt->execute([':lb' => $user['user_id'], ':id' => $id]);
+
+            jsonResponse(['message' => 'Tax record locked']);
+        } catch (\Throwable $e) {
+            jsonError('Tax lock error: ' . $e->getMessage(), 500);
+        }
+    }
 }

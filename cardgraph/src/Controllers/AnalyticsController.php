@@ -570,6 +570,33 @@ class AnalyticsController
         }
         unset($row);
 
+        // Detect likely-incomplete recent months: if the last completed month's
+        // total_sales is below 30% of the average of the prior 3 completed months,
+        // flag it as partial to prevent it from dragging down the forecast trend.
+        $completed = array_values(array_filter($monthly, fn($r) => !$r['is_partial']));
+        $cCount = count($completed);
+        if ($cCount >= 4) {
+            $last = $completed[$cCount - 1];
+            $priorAvg = 0;
+            for ($i = $cCount - 4; $i < $cCount - 1; $i++) {
+                $priorAvg += (float)$completed[$i]['total_sales'];
+            }
+            $priorAvg /= 3;
+            if ($priorAvg > 0 && (float)$last['total_sales'] < $priorAvg * 0.30) {
+                // Re-flag this month as partial with days_elapsed = days_in_month
+                // (indicates fully elapsed but data not yet imported)
+                foreach ($monthly as &$row) {
+                    if ($row['period'] === $last['period']) {
+                        $row['is_partial'] = true;
+                        $periodDate = $row['period'] . '-01';
+                        $row['days_elapsed'] = (int) date('t', strtotime($periodDate));
+                        $row['days_in_month'] = $row['days_elapsed'];
+                    }
+                }
+                unset($row);
+            }
+        }
+
         return $monthly;
     }
 

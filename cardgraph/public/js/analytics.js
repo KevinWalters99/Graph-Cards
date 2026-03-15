@@ -399,14 +399,14 @@ const Analytics = {
             },
         ];
 
-        // Current position flag (red triangle)
+        // Current position flag (smaller, semi-transparent to not dominate the chart)
         if (hasPartial) {
             datasets.push({
                 label: 'Current Position',
                 data: flagData,
                 borderColor: '#c0392b',
-                backgroundColor: '#c0392b',
-                pointRadius: 8,
+                backgroundColor: 'rgba(192,57,43,0.4)',
+                pointRadius: 5,
                 pointStyle: 'triangle',
                 showLine: false,
                 fill: false,
@@ -416,8 +416,8 @@ const Analytics = {
                 label: 'On Pace',
                 data: proratedData,
                 borderColor: '#27ae60',
-                backgroundColor: '#27ae60',
-                pointRadius: 6,
+                backgroundColor: 'rgba(39,174,96,0.4)',
+                pointRadius: 5,
                 pointStyle: 'rectRot',
                 showLine: false,
                 fill: false,

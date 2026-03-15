@@ -17,6 +17,7 @@ class CardsAnalyticsController
      */
     public function summary(array $params = []): void
     {
+        try {
         $pdo = cg_db();
         $dimension = $_GET['dimension'] ?? 'player';
         $sort = $_GET['sort'] ?? 'revenue';
@@ -117,6 +118,9 @@ class CardsAnalyticsController
         unset($row);
 
         jsonResponse(['data' => $rows, 'dimension' => $dimension, 'total' => count($rows)]);
+        } catch (\Throwable $e) {
+            jsonError('Cards analytics error: ' . $e->getMessage(), 500);
+        }
     }
 
     /**
@@ -125,6 +129,7 @@ class CardsAnalyticsController
      */
     public function totals(array $params = []): void
     {
+        try {
         $pdo = cg_db();
 
         $excludedStatuses = $pdo->query(
@@ -164,6 +169,9 @@ class CardsAnalyticsController
             'auto_count'     => (int) $row['auto_count'],
             'graded_count'   => (int) $row['graded_count'],
         ]);
+        } catch (\Throwable $e) {
+            jsonError('Cards analytics error: ' . $e->getMessage(), 500);
+        }
     }
 
     /**

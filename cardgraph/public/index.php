@@ -57,6 +57,12 @@ $router->post('/api/financial-summary/costs', ['FinancialSummaryController', 'cr
 $router->put('/api/financial-summary/costs/{id}', ['FinancialSummaryController', 'updateCost']);
 $router->delete('/api/financial-summary/costs/{id}', ['FinancialSummaryController', 'deleteCost']);
 
+// === Tax Preparation ===
+$router->get('/api/financial-summary/tax-preview',        ['FinancialSummaryController', 'taxPreview']);
+$router->get('/api/financial-summary/tax-records',         ['FinancialSummaryController', 'listTaxRecords']);
+$router->post('/api/financial-summary/tax-records',        ['FinancialSummaryController', 'saveTaxRecord']);
+$router->put('/api/financial-summary/tax-records/{id}/lock', ['FinancialSummaryController', 'lockTaxRecord']);
+
 // === eBay Transactions ===
 $router->get('/api/ebay/summary', ['EbayController', 'summary']);
 $router->get('/api/ebay/orders', ['EbayController', 'listOrders']);
@@ -200,9 +206,18 @@ $router->post('/api/parser/refresh/popularity',        ['ParserController', 'imp
 $router->post('/api/parser/refresh/backfill-status',   ['ParserController', 'backfillDraftStatus']);
 
 // === MLB ===
-$router->get('/api/mlb/schedule',       ['MlbController', 'getSchedule']);
-$router->get('/api/mlb/game/{id}',      ['MlbController', 'getGameDetail']);
-$router->get('/api/mlb/standings',      ['MlbController', 'getStandings']);
+$router->get('/api/mlb/schedule',         ['MlbController', 'getSchedule']);
+$router->get('/api/mlb/game/{id}',        ['MlbController', 'getGameDetail']);
+$router->get('/api/mlb/standings',        ['MlbController', 'getStandings']);
+$router->get('/api/mlb/team-profile',     ['MlbController', 'getTeamProfile']);
+$router->get('/api/mlb/team-affiliates',  ['MlbController', 'getTeamAffiliates']);
+$router->get('/api/mlb/team-roster',      ['MlbController', 'getTeamRoster']);
+$router->get('/api/mlb/postseason',       ['MlbController', 'getPostseason']);
+$router->get('/api/mlb/wild-card',        ['MlbController', 'getWildCard']);
+
+// === MiLB ===
+$router->get('/api/milb/standings',       ['MlbController', 'getMilbStandings']);
+$router->get('/api/milb/teams',           ['MlbController', 'getMilbTeams']);
 
 // === Maintenance ===
 $router->get('/api/maintenance/upload-log', ['MaintenanceController', 'uploadLog']);

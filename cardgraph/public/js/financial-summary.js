@@ -10,6 +10,8 @@ const FinancialSummary = {
     collapsed: {},  // tracks collapsed state: { '2025': true, '2025-Q1': true }
     monthlyDetailsCache: {},  // { '2025-01': [records...] }
     loadingDetails: {},  // { '2025-01': true } — prevents duplicate fetches
+    taxPreviewData: null,
+    taxSelectedYear: null,
 
     async init() {
         const panel = document.getElementById('tab-financial-summary');
@@ -23,10 +25,12 @@ const FinancialSummary = {
                     <button class="sub-tab active" data-subtab="monthly">Monthly Overview</button>
                     <button class="sub-tab" data-subtab="overview">Summary Overview</button>
                     <button class="sub-tab" data-subtab="costs">General Costs</button>
+                    <button class="sub-tab" data-subtab="tax">Tax Prep</button>
                 </div>
                 <div id="fs-overview" class="sub-panel"></div>
                 <div id="fs-monthly" class="sub-panel" style="display:none;"></div>
                 <div id="fs-costs" class="sub-panel" style="display:none;"></div>
+                <div id="fs-tax" class="sub-panel" style="display:none;"></div>
             `;
 
             document.querySelectorAll('#fs-sub-tabs .sub-tab').forEach(btn => {
@@ -47,10 +51,12 @@ const FinancialSummary = {
         document.getElementById('fs-overview').style.display = name === 'overview' ? '' : 'none';
         document.getElementById('fs-monthly').style.display = name === 'monthly' ? '' : 'none';
         document.getElementById('fs-costs').style.display = name === 'costs' ? '' : 'none';
+        document.getElementById('fs-tax').style.display = name === 'tax' ? '' : 'none';
 
         if (name === 'overview') this.loadOverview();
         if (name === 'monthly') this.loadMonthly();
         if (name === 'costs') this.loadCosts();
+        if (name === 'tax') this.loadTaxPrep();
     },
 
     // =========================================================
@@ -358,6 +364,12 @@ const FinancialSummary = {
             App.showLoading();
             const result = await API.get('/api/financial-summary/monthly');
             this.monthlyData = result.monthly || [];
+            // Default: months collapsed (days hidden), years/quarters expanded
+            if (Object.keys(this.collapsed).length === 0) {
+                this.monthlyData.forEach(m => {
+                    this.collapsed['m-' + m.month] = true;
+                });
+            }
             this.renderMonthly();
         } catch (err) {
             document.getElementById('fs-monthly').innerHTML =
@@ -429,7 +441,7 @@ const FinancialSummary = {
             const yearCollapsed = !!this.collapsed[yr];
 
             // Year row
-            html += `<tr class="fs-row-year" data-toggle="${yr}" style="cursor:pointer;background:#1a1a2e;color:#fff;">`;
+            html += `<tr class="fs-row-year" data-toggle="${yr}" style="cursor:pointer;background:#1a1a2e;color:#fff;border-bottom:2px solid #4a9eff;">`;
             html += `<td><span class="fs-toggle-icon">${yearCollapsed ? '&#9654;' : '&#9660;'}</span> <strong>${yr}</strong></td>`;
             html += `<td style="text-align:right"><strong>${yTot.auction_count}</strong></td>`;
             html += `<td style="text-align:right"><strong>${cur(yTot.total_earnings)}</strong></td>`;
@@ -463,7 +475,7 @@ const FinancialSummary = {
                 const hideQ = yearCollapsed ? 'display:none;' : '';
 
                 // Quarter row
-                html += `<tr class="fs-row-quarter fs-child-${yr}" data-toggle="${qKey}" style="cursor:pointer;background:#f0f2f5;${hideQ}">`;
+                html += `<tr class="fs-row-quarter fs-child-${yr}" data-toggle="${qKey}" style="cursor:pointer;background:#e3edf7;${hideQ}">`;
                 html += `<td style="padding-left:24px;"><span class="fs-toggle-icon">${qCollapsed ? '&#9654;' : '&#9660;'}</span> <strong>Q${qData.q} ${yr}</strong></td>`;
                 html += `<td style="text-align:right"><strong>${qTot.auction_count}</strong></td>`;
                 html += `<td style="text-align:right"><strong>${cur(qTot.total_earnings)}</strong></td>`;
@@ -484,7 +496,7 @@ const FinancialSummary = {
                     const monthExpanded = !this.collapsed['m-' + m.month];
 
                     // Month summary row — light yellow highlight
-                    html += `<tr class="fs-row-month fs-child-${yr} fs-child-${qKey}" data-toggle="m-${m.month}" style="cursor:pointer;background:#fffde7;${hideM}">`;
+                    html += `<tr class="fs-row-month fs-child-${yr} fs-child-${qKey}" data-toggle="m-${m.month}" style="cursor:pointer;background:#f5f5f5;${hideM}">`;
                     html += `<td style="padding-left:48px;"><span class="fs-toggle-icon">${monthExpanded ? '&#9660;' : '&#9654;'}</span> ${monthLabel}</td>`;
                     html += `<td style="text-align:right">${m.auction_count}</td>`;
                     html += `<td style="text-align:right">${cur(m.total_earnings)}</td>`;
@@ -494,7 +506,7 @@ const FinancialSummary = {
                     html += `<td style="${sRed}">${cur(m.total_general_costs)}</td>`;
                     html += `<td style="${sRed}">${cur(m.pp_purchases)}</td>`;
                     html += `<td style="${sGreen}">${cur(m.pp_income)}</td>`;
-                    html += `<td style="text-align:right"><span class="${m.net >= 0 ? 'text-success' : 'text-danger'}">${cur(m.net)}</span></td>`;
+                    html += `<td style="text-align:right"><strong class="${m.net >= 0 ? 'text-success' : 'text-danger'}">${cur(m.net)}</strong></td>`;
                     html += '</tr>';
 
                     // Detail sub-rows: daily summary rows (same columns)
@@ -621,5 +633,331 @@ const FinancialSummary = {
         const names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
                         'July', 'August', 'September', 'October', 'November', 'December'];
         return names[parseInt(mo)] + ' ' + yr;
+    },
+
+    // =========================================================
+    // Tax Preparation
+    // =========================================================
+    async loadTaxPrep() {
+        try {
+            App.showLoading();
+            const year = this.taxSelectedYear || new Date().getFullYear();
+            const data = await API.get('/api/financial-summary/tax-preview', { year });
+            this.taxPreviewData = data;
+            this.taxSelectedYear = data.year;
+            this.renderTaxPrep();
+        } catch (err) {
+            document.getElementById('fs-tax').innerHTML =
+                '<p class="text-muted" style="padding:24px;">Unable to load tax data.</p>';
+            App.toast(err.message, 'error');
+        } finally {
+            App.hideLoading();
+        }
+    },
+
+    renderTaxPrep() {
+        const container = document.getElementById('fs-tax');
+        const data = this.taxPreviewData;
+        if (!data) {
+            container.innerHTML = '<p class="text-muted" style="padding:24px;">No tax data available.</p>';
+            return;
+        }
+
+        const cur = (v) => App.formatCurrency(v);
+        const q = data.quarters;
+        const a = data.annual;
+        const saved = data.saved_records || [];
+
+        // Build saved records lookup: { 1: record, 2: record, null: annual record }
+        const savedMap = {};
+        saved.forEach(r => {
+            const key = r.period_type === 'annual' ? 'annual' : 'q' + r.tax_quarter;
+            savedMap[key] = r;
+        });
+
+        // Year selector
+        let yearOpts = '';
+        (data.available_years || []).forEach(y => {
+            yearOpts += `<option value="${y}" ${y === data.year ? 'selected' : ''}>${y}</option>`;
+        });
+
+        let html = '<div class="mt-4">';
+
+        // Year selector row
+        html += '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">';
+        html += '<h3 class="section-title" style="margin:0;">Tax Year</h3>';
+        html += `<select id="tax-year-select" style="padding:6px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;">${yearOpts}</select>`;
+        html += '<button class="btn btn-secondary btn-sm" id="tax-print-btn" style="margin-left:auto;">Print Summary</button>';
+        html += '</div>';
+
+        // === Schedule C Overview Table ===
+        html += '<div class="table-container" id="tax-overview-print">';
+        html += '<table class="data-table" style="font-size:13px;">';
+        html += '<thead><tr>';
+        html += '<th style="min-width:180px;">Category</th>';
+        html += '<th style="text-align:right">Q1</th>';
+        html += '<th style="text-align:right">Q2</th>';
+        html += '<th style="text-align:right">Q3</th>';
+        html += '<th style="text-align:right">Q4</th>';
+        html += '<th style="text-align:right;background:#f0f2f5;">Annual</th>';
+        html += '</tr></thead><tbody>';
+
+        const row = (label, key, style = '') => {
+            let r = `<tr style="${style}">`;
+            r += `<td>${label}</td>`;
+            for (let i = 0; i < 4; i++) r += `<td style="text-align:right">${cur(q[i][key])}</td>`;
+            r += `<td style="text-align:right;background:#f0f2f5;"><strong>${cur(a[key])}</strong></td>`;
+            r += '</tr>';
+            return r;
+        };
+
+        // Income section
+        html += '<tr style="background:#e8f5e9;"><td colspan="6" style="font-weight:600;color:#2e7d32;">Income</td></tr>';
+        html += row('Payouts Received', 'total_payouts');
+        html += row('PayPal Income', 'paypal_income');
+        html += row('Gross Income', 'gross_income', 'font-weight:600;border-bottom:1px solid #ccc;');
+
+        // COGS section
+        html += '<tr style="background:#fff3e0;"><td colspan="6" style="font-weight:600;color:#e65100;">Cost of Goods Sold</td></tr>';
+        html += row('Card Inventory (Item Costs)', 'item_costs');
+        html += row('PayPal Purchases', 'paypal_purchases');
+        html += row('Total COGS', 'total_cogs', 'font-weight:600;border-bottom:1px solid #ccc;');
+
+        // Gross Profit
+        let gpRow = '<tr style="background:#e3f2fd;font-weight:600;">';
+        gpRow += '<td style="color:#1565c0;">Gross Profit</td>';
+        for (let i = 0; i < 4; i++) {
+            const val = q[i].gross_profit;
+            gpRow += `<td style="text-align:right" class="${val >= 0 ? 'text-success' : 'text-danger'}">${cur(val)}</td>`;
+        }
+        gpRow += `<td style="text-align:right;background:#f0f2f5;" class="${a.gross_profit >= 0 ? 'text-success' : 'text-danger'}"><strong>${cur(a.gross_profit)}</strong></td>`;
+        gpRow += '</tr>';
+        html += gpRow;
+
+        // Operating Expenses
+        html += '<tr style="background:#fce4ec;"><td colspan="6" style="font-weight:600;color:#c62828;">Operating Expenses</td></tr>';
+        html += row('Platform Fees', 'platform_fees');
+        html += row('Shipping Costs', 'shipping_costs');
+        html += row('General Costs', 'general_costs');
+        html += row('Total Operating', 'total_operating', 'font-weight:600;border-bottom:1px solid #ccc;');
+
+        // Net Before Deductions
+        let nbdRow = '<tr style="background:#ede7f6;font-weight:600;">';
+        nbdRow += '<td style="color:#4527a0;">Net Before Deductions</td>';
+        for (let i = 0; i < 4; i++) {
+            const val = q[i].net_before_deductions;
+            nbdRow += `<td style="text-align:right" class="${val >= 0 ? 'text-success' : 'text-danger'}">${cur(val)}</td>`;
+        }
+        nbdRow += `<td style="text-align:right;background:#f0f2f5;" class="${a.net_before_deductions >= 0 ? 'text-success' : 'text-danger'}"><strong>${cur(a.net_before_deductions)}</strong></td>`;
+        nbdRow += '</tr>';
+        html += nbdRow;
+
+        html += '</tbody></table></div>';
+
+        // === Quarterly Deduction Cards ===
+        html += '<h3 class="section-title mt-4">Deductions by Quarter</h3>';
+        html += '<p class="text-muted" style="font-size:12px;margin-bottom:12px;">Enter business deductions for each quarter. Save as draft, then lock in when finalized.</p>';
+
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px;">';
+        for (let qi = 1; qi <= 4; qi++) {
+            const rec = savedMap['q' + qi];
+            const locked = rec && rec.is_locked;
+            const hasDraft = rec && !rec.is_locked;
+            const qCalc = q[qi - 1];
+
+            html += `<div class="card" style="padding:16px;border:2px solid ${locked ? '#4caf50' : hasDraft ? '#ff9800' : '#e0e0e0'};border-radius:10px;">`;
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">`;
+            html += `<h4 style="margin:0;">Q${qi} ${data.year}</h4>`;
+            if (locked) {
+                html += '<span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">LOCKED</span>';
+            } else if (hasDraft) {
+                html += '<span style="background:#ff9800;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">DRAFT</span>';
+            } else {
+                html += '<span style="background:#9e9e9e;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">UNSAVED</span>';
+            }
+            html += '</div>';
+
+            // Summary line
+            html += `<div style="font-size:12px;color:#666;margin-bottom:8px;">Net before deductions: <strong class="${qCalc.net_before_deductions >= 0 ? 'text-success' : 'text-danger'}">${cur(qCalc.net_before_deductions)}</strong></div>`;
+
+            const dis = locked ? 'disabled' : '';
+            const val = (field, def) => rec ? (rec[field] ?? def) : def;
+
+            html += '<div style="font-size:12px;">';
+            html += `<div class="form-row" style="gap:4px;margin-bottom:4px;">`;
+            html += `<label style="flex:1;font-size:11px;">Phone $<input type="number" step="0.01" class="tax-input" data-q="${qi}" data-field="phone_amount" value="${val('phone_amount', '')}" ${dis} style="width:60px;padding:2px 4px;font-size:11px;"></label>`;
+            html += `<label style="flex:1;font-size:11px;">x <input type="number" min="0" max="100" class="tax-input" data-q="${qi}" data-field="phone_pct" value="${val('phone_pct', '30')}" ${dis} style="width:40px;padding:2px 4px;font-size:11px;">%</label>`;
+            html += '</div>';
+
+            html += `<div class="form-row" style="gap:4px;margin-bottom:4px;">`;
+            html += `<label style="flex:1;font-size:11px;">Miles<input type="number" step="0.1" class="tax-input" data-q="${qi}" data-field="mileage_miles" value="${val('mileage_miles', '')}" ${dis} style="width:60px;padding:2px 4px;font-size:11px;"></label>`;
+            html += `<label style="flex:1;font-size:11px;">@$<input type="number" step="0.001" class="tax-input" data-q="${qi}" data-field="mileage_rate" value="${val('mileage_rate', '0.670')}" ${dis} style="width:55px;padding:2px 4px;font-size:11px;"></label>`;
+            html += '</div>';
+
+            html += `<div style="margin-bottom:3px;"><label style="font-size:11px;">Equipment $<input type="number" step="0.01" class="tax-input" data-q="${qi}" data-field="equipment_deduction" value="${val('equipment_deduction', '')}" ${dis} style="width:80px;padding:2px 4px;font-size:11px;"></label></div>`;
+            html += `<div style="margin-bottom:3px;"><label style="font-size:11px;">Supplies $<input type="number" step="0.01" class="tax-input" data-q="${qi}" data-field="supplies_deduction" value="${val('supplies_deduction', '')}" ${dis} style="width:80px;padding:2px 4px;font-size:11px;"></label></div>`;
+            html += `<div style="margin-bottom:3px;"><label style="font-size:11px;">Advertising $<input type="number" step="0.01" class="tax-input" data-q="${qi}" data-field="advertising_deduction" value="${val('advertising_deduction', '')}" ${dis} style="width:80px;padding:2px 4px;font-size:11px;"></label></div>`;
+            html += `<div style="margin-bottom:3px;"><label style="font-size:11px;">Other $<input type="number" step="0.01" class="tax-input" data-q="${qi}" data-field="other_deduction" value="${val('other_deduction', '')}" ${dis} style="width:80px;padding:2px 4px;font-size:11px;"></label></div>`;
+            html += `<div style="margin-bottom:6px;"><label style="font-size:11px;">Notes<br><input type="text" class="tax-input" data-q="${qi}" data-field="deduction_notes" value="${val('deduction_notes', '')}" ${dis} style="width:100%;padding:2px 4px;font-size:11px;"></label></div>`;
+            html += '</div>';
+
+            if (!locked) {
+                html += '<div style="display:flex;gap:6px;margin-top:8px;">';
+                html += `<button class="btn btn-primary btn-sm tax-save-btn" data-q="${qi}">Save Draft</button>`;
+                if (hasDraft) {
+                    html += `<button class="btn btn-success btn-sm tax-lock-btn" data-q="${qi}" data-id="${rec.tax_record_id}">Lock In</button>`;
+                }
+                html += '</div>';
+            } else {
+                html += `<div style="font-size:11px;color:#666;margin-top:6px;">Locked by ${rec.locked_by_name || 'user'} on ${rec.locked_at ? rec.locked_at.split(' ')[0] : ''}</div>`;
+            }
+
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // === Annual Summary Card ===
+        const annRec = savedMap['annual'];
+        const annLocked = annRec && annRec.is_locked;
+        const annDraft = annRec && !annRec.is_locked;
+
+        html += '<h3 class="section-title">Annual Summary</h3>';
+        html += `<div class="card" style="padding:16px;border:2px solid ${annLocked ? '#4caf50' : annDraft ? '#ff9800' : '#e0e0e0'};border-radius:10px;margin-bottom:24px;">`;
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+        html += `<h4 style="margin:0;">Full Year ${data.year}</h4>`;
+        if (annLocked) {
+            html += '<span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">LOCKED</span>';
+        } else if (annDraft) {
+            html += '<span style="background:#ff9800;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">DRAFT</span>';
+        }
+        html += '</div>';
+
+        // Annual deduction totals (sum of all quarter deductions if locked, or manual entry)
+        const dis2 = annLocked ? 'disabled' : '';
+        const annVal = (field, def) => annRec ? (annRec[field] ?? def) : def;
+
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;font-size:12px;margin-bottom:12px;">';
+        html += `<div><label style="font-size:11px;">Phone $<input type="number" step="0.01" class="tax-input" data-q="annual" data-field="phone_amount" value="${annVal('phone_amount', '')}" ${dis2} style="width:70px;padding:2px 4px;font-size:11px;"></label> x <input type="number" min="0" max="100" class="tax-input" data-q="annual" data-field="phone_pct" value="${annVal('phone_pct', '30')}" ${dis2} style="width:35px;padding:2px 4px;font-size:11px;">%</div>`;
+        html += `<div><label style="font-size:11px;">Miles<input type="number" step="0.1" class="tax-input" data-q="annual" data-field="mileage_miles" value="${annVal('mileage_miles', '')}" ${dis2} style="width:60px;padding:2px 4px;font-size:11px;"></label> @$<input type="number" step="0.001" class="tax-input" data-q="annual" data-field="mileage_rate" value="${annVal('mileage_rate', '0.670')}" ${dis2} style="width:50px;padding:2px 4px;font-size:11px;"></div>`;
+        html += `<div><label style="font-size:11px;">Equipment $<input type="number" step="0.01" class="tax-input" data-q="annual" data-field="equipment_deduction" value="${annVal('equipment_deduction', '')}" ${dis2} style="width:80px;padding:2px 4px;font-size:11px;"></label></div>`;
+        html += `<div><label style="font-size:11px;">Supplies $<input type="number" step="0.01" class="tax-input" data-q="annual" data-field="supplies_deduction" value="${annVal('supplies_deduction', '')}" ${dis2} style="width:80px;padding:2px 4px;font-size:11px;"></label></div>`;
+        html += `<div><label style="font-size:11px;">Advertising $<input type="number" step="0.01" class="tax-input" data-q="annual" data-field="advertising_deduction" value="${annVal('advertising_deduction', '')}" ${dis2} style="width:80px;padding:2px 4px;font-size:11px;"></label></div>`;
+        html += `<div><label style="font-size:11px;">Other $<input type="number" step="0.01" class="tax-input" data-q="annual" data-field="other_deduction" value="${annVal('other_deduction', '')}" ${dis2} style="width:80px;padding:2px 4px;font-size:11px;"></label></div>`;
+        html += '</div>';
+        html += `<div style="margin-bottom:8px;"><label style="font-size:11px;">Notes<br><input type="text" class="tax-input" data-q="annual" data-field="deduction_notes" value="${annVal('deduction_notes', '')}" ${dis2} style="width:100%;max-width:500px;padding:2px 4px;font-size:11px;"></label></div>`;
+
+        if (!annLocked) {
+            html += '<div style="display:flex;gap:8px;margin-top:8px;">';
+            html += '<button class="btn btn-primary btn-sm tax-save-btn" data-q="annual">Save Annual Draft</button>';
+            if (annDraft) {
+                html += `<button class="btn btn-success btn-sm tax-lock-btn" data-q="annual" data-id="${annRec.tax_record_id}">Lock In Annual</button>`;
+            }
+            html += '</div>';
+        } else {
+            html += `<div style="font-size:11px;color:#666;margin-top:6px;">Locked by ${annRec.locked_by_name || 'user'} on ${annRec.locked_at ? annRec.locked_at.split(' ')[0] : ''}</div>`;
+        }
+        html += '</div>';
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Event handlers
+        document.getElementById('tax-year-select').addEventListener('change', (e) => {
+            this.taxSelectedYear = parseInt(e.target.value);
+            this.loadTaxPrep();
+        });
+
+        document.getElementById('tax-print-btn').addEventListener('click', () => {
+            this._printTaxSummary();
+        });
+
+        container.querySelectorAll('.tax-save-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const qVal = btn.dataset.q;
+                this._saveTaxDraft(qVal);
+            });
+        });
+
+        container.querySelectorAll('.tax-lock-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const qVal = btn.dataset.q;
+                const recId = parseInt(btn.dataset.id);
+                this._lockTaxRecord(recId, qVal);
+            });
+        });
+    },
+
+    _getTaxInputs(qVal) {
+        const inputs = {};
+        document.querySelectorAll(`.tax-input[data-q="${qVal}"]`).forEach(inp => {
+            const field = inp.dataset.field;
+            if (field === 'deduction_notes') {
+                inputs[field] = inp.value;
+            } else {
+                inputs[field] = parseFloat(inp.value) || 0;
+            }
+        });
+        return inputs;
+    },
+
+    async _saveTaxDraft(qVal) {
+        const data = this.taxPreviewData;
+        if (!data) return;
+
+        const inputs = this._getTaxInputs(qVal);
+        const isAnnual = qVal === 'annual';
+        const qIdx = isAnnual ? null : parseInt(qVal) - 1;
+        const financials = isAnnual ? data.annual : data.quarters[qIdx];
+
+        const body = {
+            tax_year: data.year,
+            tax_quarter: isAnnual ? null : parseInt(qVal),
+            // Financial data from preview
+            total_payouts: financials.total_payouts,
+            paypal_income: financials.paypal_income,
+            item_costs: financials.item_costs,
+            paypal_purchases: financials.paypal_purchases,
+            platform_fees: financials.platform_fees,
+            shipping_costs: financials.shipping_costs,
+            general_costs: financials.general_costs,
+            // Deductions from user inputs
+            ...inputs,
+        };
+
+        try {
+            await API.post('/api/financial-summary/tax-records', body);
+            App.toast('Tax record saved as draft', 'success');
+            this.loadTaxPrep();
+        } catch (err) {
+            App.toast(err.message, 'error');
+        }
+    },
+
+    async _lockTaxRecord(recordId, qVal) {
+        const label = qVal === 'annual' ? 'Annual ' + this.taxSelectedYear : 'Q' + qVal + ' ' + this.taxSelectedYear;
+        if (!confirm(`Lock in tax record for ${label}? This cannot be undone from the application.`)) return;
+
+        try {
+            await API.put('/api/financial-summary/tax-records/' + recordId + '/lock');
+            App.toast(`${label} tax record locked`, 'success');
+            this.loadTaxPrep();
+        } catch (err) {
+            App.toast(err.message, 'error');
+        }
+    },
+
+    _printTaxSummary() {
+        const printArea = document.getElementById('tax-overview-print');
+        if (!printArea) return;
+
+        const win = window.open('', '_blank');
+        win.document.write(`<html><head><title>Tax Summary ${this.taxSelectedYear}</title>`);
+        win.document.write('<style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:13px;}th,td{border:1px solid #ccc;padding:6px 10px;}th{background:#f0f2f5;text-align:left;}.text-success{color:#2e7d32;}.text-danger{color:#c62828;}h2{margin-bottom:16px;}</style>');
+        win.document.write('</head><body>');
+        win.document.write(`<h2>Tax Preparation Summary - ${this.taxSelectedYear}</h2>`);
+        win.document.write(printArea.innerHTML);
+        win.document.write('</body></html>');
+        win.document.close();
+        win.print();
     }
 };
