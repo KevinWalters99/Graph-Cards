@@ -1,6 +1,6 @@
 /**
  * Card Graph — PayPal Tab
- * Sub-tabs: PayPal Detail, PayPal Assignment
+ * Sub-tabs: Detail, Assignment, Category Breakdown, Reconciliation, Assignment Summary
  */
 const PayPal = {
     initialized: false,
@@ -28,8 +28,11 @@ const PayPal = {
                     <button class="btn btn-primary" id="btn-upload-paypal">Upload PayPal CSV</button>
                 </div>
                 <div class="sub-tabs" id="pp-sub-tabs">
-                    <button class="sub-tab active" data-subtab="detail">PayPal Detail</button>
-                    <button class="sub-tab" data-subtab="assignment">PayPal Assignment</button>
+                    <button class="sub-tab active" data-subtab="detail">Detail</button>
+                    <button class="sub-tab" data-subtab="assignment">Assignment</button>
+                    <button class="sub-tab" data-subtab="breakdown">Category Breakdown</button>
+                    <button class="sub-tab" data-subtab="reconciliation">Reconciliation</button>
+                    <button class="sub-tab" data-subtab="assign-summary">Assignment Summary</button>
                 </div>
                 <div id="pp-detail" class="sub-panel">
                     <div id="pp-detail-cards" class="cards-row"></div>
@@ -48,6 +51,15 @@ const PayPal = {
                     <div id="pp-assign-cards" class="cards-row"></div>
                     <div id="pp-assign-filters"></div>
                     <div id="pp-assign-table"></div>
+                </div>
+                <div id="pp-breakdown" class="sub-panel" style="display:none;">
+                    <div id="pp-breakdown-content"></div>
+                </div>
+                <div id="pp-reconciliation" class="sub-panel" style="display:none;">
+                    <div id="pp-reconciliation-content"></div>
+                </div>
+                <div id="pp-assign-summary" class="sub-panel" style="display:none;">
+                    <div id="pp-summary-content"></div>
                 </div>
             `;
 
@@ -90,9 +102,15 @@ const PayPal = {
         });
         document.getElementById('pp-detail').style.display = name === 'detail' ? '' : 'none';
         document.getElementById('pp-assignment').style.display = name === 'assignment' ? '' : 'none';
+        document.getElementById('pp-breakdown').style.display = name === 'breakdown' ? '' : 'none';
+        document.getElementById('pp-reconciliation').style.display = name === 'reconciliation' ? '' : 'none';
+        document.getElementById('pp-assign-summary').style.display = name === 'assign-summary' ? '' : 'none';
 
         if (name === 'detail') this.loadDetailData();
         if (name === 'assignment') this.loadAssignmentData();
+        if (name === 'breakdown') this.loadBreakdown();
+        if (name === 'reconciliation') this.loadReconciliation();
+        if (name === 'assign-summary') this.loadAssignmentSummary();
     },
 
     async loadFilterOptions() {
@@ -290,11 +308,12 @@ const PayPal = {
                             ${a.livestream_title ? ' &bull; ' + a.livestream_title : ''}
                             ${a.notes ? '<br><small class="text-muted">' + a.notes + '</small>' : ''}
                         </div>
-                        <div>
+                        <div style="display:flex;align-items:center;gap:6px;">
                             <small class="text-muted">${a.assigned_by_name} - ${App.formatDatetime(a.assigned_at)}</small>
                             ${a.is_locked == 1
                                 ? '<span class="status-badge status-completed" style="margin-left:8px;">&#128274; Locked</span>'
-                                : `<button class="btn btn-danger btn-sm" style="margin-left:8px;" onclick="PayPal.deleteAllocation(${a.allocation_id}, ${id})">Del</button>`
+                                : `<button class="btn btn-secondary btn-sm" onclick="PayPal.showEditAllocation(${a.allocation_id}, ${id}, '${a.sales_source}', ${a.livestream_id || 'null'}, ${parseFloat(a.amount_allocated)}, '${(a.notes || '').replace(/'/g, "\\'")}')">Edit</button>
+                                   <button class="btn btn-danger btn-sm" onclick="PayPal.deleteAllocation(${a.allocation_id}, ${id})">Del</button>`
                             }
                         </div>
                     </div>`).join('')
@@ -369,6 +388,11 @@ const PayPal = {
                     ${allocHtml}
                     ${allocSummary}
                     ${addFormHtml}
+
+                    <hr class="section-divider">
+                    <div style="display:flex;justify-content:flex-end;">
+                        <button class="btn btn-danger btn-sm" onclick="PayPal.deleteTransaction(${txn.pp_transaction_id})">Delete Transaction</button>
+                    </div>
                 </div>
             `);
         } catch (err) {
@@ -692,5 +716,377 @@ const PayPal = {
                 App.toast(err.message, 'error');
             }
         });
+    },
+
+    // =========================================================
+    // Delete Transaction
+    // =========================================================
+    async deleteTransaction(ppTxnId) {
+        if (!confirm('Delete this PayPal transaction? This will also remove all allocations. This cannot be undone.')) return;
+        try {
+            await API.del(`/api/paypal/transactions/${ppTxnId}`);
+            App.toast('Transaction deleted', 'success');
+            App.closeModal();
+            this.loadDetailData();
+            this.loadAssignmentData();
+        } catch (err) {
+            App.toast(err.message, 'error');
+        }
+    },
+
+    // =========================================================
+    // Edit Allocation
+    // =========================================================
+    showEditAllocation(allocId, ppTxnId, source, livestreamId, amount, notes) {
+        App.openModal(`
+            <div class="modal-header">
+                <h2>Edit Allocation</h2>
+                <button class="modal-close" onclick="App.closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Sales Source</label>
+                        <select id="pp-edit-alloc-source">
+                            <option value="Auction" ${source === 'Auction' ? 'selected' : ''}>Auction</option>
+                            <option value="eBay" ${source === 'eBay' ? 'selected' : ''}>eBay</option>
+                            <option value="Private-Collection" ${source === 'Private-Collection' ? 'selected' : ''}>Private-Collection</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Livestream</label>
+                        <select id="pp-edit-alloc-livestream">
+                            <option value="">None</option>
+                            ${this.livestreams.map(ls => `<option value="${ls.livestream_id}" ${ls.livestream_id == livestreamId ? 'selected' : ''}>${(ls.stream_date || '') + ' - ' + ls.livestream_title}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <input type="number" id="pp-edit-alloc-amount" step="0.01" value="${amount}">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <input type="text" id="pp-edit-alloc-notes" value="${notes || ''}">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+                <button class="btn btn-primary" id="pp-edit-alloc-save">Save Changes</button>
+            </div>
+        `);
+
+        document.getElementById('pp-edit-alloc-save').addEventListener('click', async () => {
+            const data = {
+                sales_source: document.getElementById('pp-edit-alloc-source').value,
+                livestream_id: document.getElementById('pp-edit-alloc-livestream').value || null,
+                amount_allocated: parseFloat(document.getElementById('pp-edit-alloc-amount').value),
+                notes: document.getElementById('pp-edit-alloc-notes').value.trim() || null,
+            };
+            if (!data.amount_allocated) {
+                App.toast('Amount is required', 'error');
+                return;
+            }
+            try {
+                await API.put(`/api/paypal/allocations/${allocId}`, data);
+                App.toast('Allocation updated', 'success');
+                App.closeModal();
+                this.showTransactionDetail(ppTxnId);
+                this.loadAssignmentData();
+                this.loadDetailData();
+            } catch (err) {
+                App.toast(err.message, 'error');
+            }
+        });
+    },
+
+    // =========================================================
+    // Category Breakdown Sub-tab
+    // =========================================================
+    async loadBreakdown() {
+        const container = document.getElementById('pp-breakdown-content');
+        try {
+            App.showLoading();
+            const result = await API.get('/api/paypal/breakdown');
+            this.renderBreakdown(result);
+        } catch (err) {
+            container.innerHTML = '<p class="text-muted" style="padding:24px;">Unable to load breakdown data.</p>';
+            App.toast(err.message, 'error');
+        } finally {
+            App.hideLoading();
+        }
+    },
+
+    renderBreakdown(data) {
+        const container = document.getElementById('pp-breakdown-content');
+        const cur = (v) => App.formatCurrency(v);
+        const byCategory = data.by_category || [];
+        const byType = data.by_type || [];
+        const byStatus = data.by_status || [];
+
+        // Category summary cards
+        const catColors = {
+            purchase: '#e53935', refund: '#ff9800', income: '#2e7d32',
+            offset: '#546e7a', auth: '#7e57c2', withdrawal: '#d84315'
+        };
+        let catCardsHtml = '<div class="cards-row"><div class="cards-group" style="flex:0 0 auto;grid-template-columns:repeat(' + Math.max(byCategory.length, 1) + ',1fr);">';
+        byCategory.forEach(c => {
+            const color = catColors[c.charge_category] || '#333';
+            catCardsHtml += `
+                <div class="card">
+                    <div class="card-label" style="text-transform:capitalize;">${c.charge_category}</div>
+                    <div class="card-value val-count">${c.transaction_count}</div>
+                    <div class="card-sub" style="color:${color};font-weight:600;">${cur(c.total_amount)}</div>
+                    ${c.total_fees != 0 ? `<div class="card-sub text-muted">Fees: ${cur(c.total_fees)}</div>` : ''}
+                </div>`;
+        });
+        catCardsHtml += '</div></div>';
+
+        // Type breakdown table grouped by category
+        let typeTableHtml = '<div class="table-container"><table class="data-table"><thead><tr>';
+        typeTableHtml += '<th>Category</th><th>Type</th><th>Status</th>';
+        typeTableHtml += '<th style="text-align:right">Count</th>';
+        typeTableHtml += '<th style="text-align:right">Amount</th>';
+        typeTableHtml += '<th style="text-align:right">Fees</th>';
+        typeTableHtml += '<th style="text-align:right">Net</th>';
+        typeTableHtml += '</tr></thead><tbody>';
+
+        let prevCat = '';
+        byType.forEach(row => {
+            const catLabel = row.charge_category !== prevCat ? `<strong style="text-transform:capitalize;">${row.charge_category}</strong>` : '';
+            prevCat = row.charge_category;
+            const amtClass = parseFloat(row.total_amount) >= 0 ? 'text-success' : 'text-danger';
+            typeTableHtml += `<tr>
+                <td>${catLabel}</td>
+                <td>${row.type}</td>
+                <td><span class="status-badge ${row.status === 'Completed' ? 'status-completed' : ''}">${row.status}</span></td>
+                <td style="text-align:right">${row.transaction_count}</td>
+                <td style="text-align:right"><span class="${amtClass}">${cur(row.total_amount)}</span></td>
+                <td style="text-align:right">${cur(row.total_fees)}</td>
+                <td style="text-align:right">${cur(row.total_net)}</td>
+            </tr>`;
+        });
+        typeTableHtml += '</tbody></table></div>';
+
+        // Status summary
+        let statusHtml = '<div class="cards-row"><div class="cards-group" style="flex:0 0 auto;grid-template-columns:repeat(' + Math.max(byStatus.length, 1) + ',1fr);">';
+        byStatus.forEach(s => {
+            statusHtml += `
+                <div class="card">
+                    <div class="card-label">${s.status}</div>
+                    <div class="card-value val-count">${s.transaction_count}</div>
+                    <div class="card-sub">${cur(s.total_amount)}</div>
+                </div>`;
+        });
+        statusHtml += '</div></div>';
+
+        container.innerHTML = `
+            <div class="mt-4">
+                <h3 class="section-title">By Category</h3>
+                ${catCardsHtml}
+            </div>
+            <div class="mt-4">
+                <h3 class="section-title">By Status</h3>
+                ${statusHtml}
+            </div>
+            <div class="mt-4">
+                <h3 class="section-title">Detailed Type Breakdown</h3>
+                <p class="text-muted" style="font-size:12px;margin-bottom:8px;">
+                    Shows how each PayPal transaction type is classified into categories.
+                    Purchases = money out for supplies/shipping. Income = money in. Offsets = bank transfers/card deposits.
+                </p>
+                ${typeTableHtml}
+            </div>
+        `;
+    },
+
+    // =========================================================
+    // Reconciliation Sub-tab
+    // =========================================================
+    async loadReconciliation() {
+        const container = document.getElementById('pp-reconciliation-content');
+        try {
+            App.showLoading();
+            const result = await API.get('/api/paypal/reconciliation');
+            this.renderReconciliation(result);
+        } catch (err) {
+            container.innerHTML = '<p class="text-muted" style="padding:24px;">Unable to load reconciliation data.</p>';
+            App.toast(err.message, 'error');
+        } finally {
+            App.hideLoading();
+        }
+    },
+
+    renderReconciliation(data) {
+        const container = document.getElementById('pp-reconciliation-content');
+        const cur = (v) => App.formatCurrency(v);
+        const monthly = data.monthly || [];
+        const totals = data.totals || {};
+
+        // Grand totals cards
+        let totalsHtml = `<div class="cards-row">
+            <div class="cards-group" style="flex:0 0 auto;grid-template-columns:repeat(5,1fr);">
+                <div class="card">
+                    <div class="card-label">Purchases (Out)</div>
+                    <div class="card-value text-danger">${cur(totals.purchases)}</div>
+                    <div class="card-sub text-muted">${totals.transaction_count || 0} total txns</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Income (In)</div>
+                    <div class="card-value text-success">${cur(totals.income)}</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Refunds</div>
+                    <div class="card-value" style="color:#ff9800;">${cur(totals.refunds)}</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Fees</div>
+                    <div class="card-value text-danger">${cur(totals.total_fees)}</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Net PayPal</div>
+                    <div class="card-value ${(totals.total_net || 0) >= 0 ? 'text-success' : 'text-danger'}">${cur(totals.total_net)}</div>
+                </div>
+            </div>
+        </div>`;
+
+        // Monthly table
+        let tableHtml = '<div class="table-container"><table class="data-table"><thead><tr>';
+        tableHtml += '<th>Month</th>';
+        tableHtml += '<th style="text-align:right">Txns</th>';
+        tableHtml += '<th style="text-align:right">Purchases</th>';
+        tableHtml += '<th style="text-align:right">Refunds</th>';
+        tableHtml += '<th style="text-align:right">Income</th>';
+        tableHtml += '<th style="text-align:right">Offsets</th>';
+        tableHtml += '<th style="text-align:right">Withdrawals</th>';
+        tableHtml += '<th style="text-align:right">Fees</th>';
+        tableHtml += '<th style="text-align:right">Net</th>';
+        tableHtml += '</tr></thead><tbody>';
+
+        monthly.forEach(m => {
+            const netClass = parseFloat(m.total_net) >= 0 ? 'text-success' : 'text-danger';
+            tableHtml += `<tr>
+                <td><strong>${this._recoMonthLabel(m.month)}</strong></td>
+                <td style="text-align:right">${m.transaction_count}</td>
+                <td style="text-align:right;color:#e53935;">${cur(m.purchases)}</td>
+                <td style="text-align:right;color:#ff9800;">${m.refunds != 0 ? cur(m.refunds) : '-'}</td>
+                <td style="text-align:right;color:#2e7d32;">${m.income != 0 ? cur(m.income) : '-'}</td>
+                <td style="text-align:right">${m.offsets != 0 ? cur(m.offsets) : '-'}</td>
+                <td style="text-align:right">${m.withdrawals != 0 ? cur(m.withdrawals) : '-'}</td>
+                <td style="text-align:right;color:#e53935;">${m.total_fees != 0 ? cur(m.total_fees) : '-'}</td>
+                <td style="text-align:right"><strong class="${netClass}">${cur(m.total_net)}</strong></td>
+            </tr>`;
+        });
+
+        // Totals row
+        if (monthly.length > 0) {
+            const netClass = (totals.total_net || 0) >= 0 ? 'text-success' : 'text-danger';
+            tableHtml += `<tr style="background:#f0f2f5;font-weight:700;">
+                <td>TOTAL</td>
+                <td style="text-align:right">${totals.transaction_count}</td>
+                <td style="text-align:right;color:#e53935;">${cur(totals.purchases)}</td>
+                <td style="text-align:right;color:#ff9800;">${cur(totals.refunds)}</td>
+                <td style="text-align:right;color:#2e7d32;">${cur(totals.income)}</td>
+                <td style="text-align:right">${cur(totals.offsets)}</td>
+                <td style="text-align:right">${cur(totals.withdrawals)}</td>
+                <td style="text-align:right;color:#e53935;">${cur(totals.total_fees)}</td>
+                <td style="text-align:right"><strong class="${netClass}">${cur(totals.total_net)}</strong></td>
+            </tr>`;
+        }
+
+        tableHtml += '</tbody></table></div>';
+
+        container.innerHTML = `
+            <div class="mt-4">
+                <h3 class="section-title">PayPal Financial Summary</h3>
+                <p class="text-muted" style="font-size:12px;margin-bottom:8px;">
+                    Monthly breakdown of all PayPal money flows. Purchases = money leaving (supplies, shipping labels, eBay payments).
+                    Income = money entering. Offsets = bank transfers and card deposits (neutral). This data feeds into the Financial Summary.
+                </p>
+                ${totalsHtml}
+            </div>
+            <div class="mt-4">
+                <h3 class="section-title">Monthly Reconciliation</h3>
+                ${tableHtml}
+            </div>
+        `;
+    },
+
+    _recoMonthLabel(monthStr) {
+        const [yr, mo] = monthStr.split('-');
+        const names = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return names[parseInt(mo)] + ' ' + yr;
+    },
+
+    // =========================================================
+    // Assignment Summary Sub-tab
+    // =========================================================
+    async loadAssignmentSummary() {
+        const container = document.getElementById('pp-summary-content');
+        try {
+            App.showLoading();
+            const result = await API.get('/api/paypal/assignments/summary');
+            this.renderAssignmentSummary(result);
+        } catch (err) {
+            container.innerHTML = '<p class="text-muted" style="padding:24px;">Unable to load assignment summary.</p>';
+            App.toast(err.message, 'error');
+        } finally {
+            App.hideLoading();
+        }
+    },
+
+    renderAssignmentSummary(data) {
+        const container = document.getElementById('pp-summary-content');
+        const cur = (v) => App.formatCurrency(v);
+        const bySource = data.by_source || [];
+        const byMonth = data.by_month || [];
+
+        // By-source summary cards
+        let sourceCardsHtml = '<div class="cards-row"><div class="cards-group" style="flex:0 0 auto;grid-template-columns:repeat(' + Math.max(bySource.length, 1) + ',1fr);">';
+        bySource.forEach(s => {
+            const pct = s.allocation_count > 0 ? Math.round((s.locked_count / s.allocation_count) * 100) : 0;
+            sourceCardsHtml += `
+                <div class="card">
+                    <div class="card-label">${s.sales_source}</div>
+                    <div class="card-value val-count">${s.allocation_count}</div>
+                    <div class="card-sub">${cur(s.total_allocated)}</div>
+                    <div class="card-sub text-muted">${s.locked_count} locked (${pct}%)</div>
+                </div>`;
+        });
+        sourceCardsHtml += '</div></div>';
+
+        // Monthly breakdown table
+        let monthTableHtml = '';
+        if (byMonth.length > 0) {
+            monthTableHtml = '<div class="mt-4"><h3 class="section-title">Monthly Breakdown</h3>';
+            monthTableHtml += '<div class="table-container"><table class="data-table"><thead><tr>';
+            monthTableHtml += '<th>Month</th><th style="text-align:right">Transactions</th><th style="text-align:right">Total Amount</th><th style="text-align:right">Assigned</th><th style="text-align:right">Assignment %</th>';
+            monthTableHtml += '</tr></thead><tbody>';
+
+            byMonth.forEach(m => {
+                const pct = m.transaction_count > 0 ? Math.round((m.assigned_count / m.transaction_count) * 100) : 0;
+                const pctClass = pct === 100 ? 'text-success' : (pct >= 50 ? 'val-expense' : 'text-danger');
+                monthTableHtml += `<tr>
+                    <td><strong>${m.month}</strong></td>
+                    <td style="text-align:right">${m.transaction_count}</td>
+                    <td style="text-align:right">${cur(m.total_amount)}</td>
+                    <td style="text-align:right">${m.assigned_count}</td>
+                    <td style="text-align:right"><span class="${pctClass}">${pct}%</span></td>
+                </tr>`;
+            });
+
+            monthTableHtml += '</tbody></table></div></div>';
+        }
+
+        container.innerHTML = `
+            <div class="mt-4">
+                <h3 class="section-title">Allocations by Source</h3>
+                ${sourceCardsHtml}
+            </div>
+            ${monthTableHtml}
+        `;
     },
 };

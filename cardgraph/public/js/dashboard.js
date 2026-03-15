@@ -52,12 +52,11 @@ const Dashboard = {
     },
 
     async loadData(filters = {}) {
-        // Show skeleton placeholders immediately while data loads
-        App.showSkeletons('dashboard-cards', 7);
         try {
+            App.showLoading();
             const [summary, trends] = await Promise.all([
-                API.cachedGet('/api/dashboard/summary', filters, 60000),
-                API.cachedGet('/api/dashboard/trends', { ...filters, group_by: 'day' }, 60000),
+                API.get('/api/dashboard/summary', filters),
+                API.get('/api/dashboard/trends', { ...filters, group_by: 'day' }),
             ]);
             this.renderCards(summary);
             this.renderTopBuyers(summary);
@@ -67,6 +66,8 @@ const Dashboard = {
             this.renderTrends(trends.trends || []);
         } catch (err) {
             App.toast(err.message, 'error');
+        } finally {
+            App.hideLoading();
         }
     },
 

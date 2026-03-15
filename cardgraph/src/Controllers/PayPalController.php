@@ -625,6 +625,171 @@ class PayPalController
     }
 
     /**
+     * GET /api/paypal/breakdown
+     * Transaction breakdown by charge_category, type, and status.
+     */
+    public function getBreakdown(array $params = []): void
+    {
+        $pdo = cg_db();
+        $where = [];
+        $bind  = [];
+
+        if (!empty($_GET['date_from'])) {
+            $where[] = 'transaction_date >= :date_from';
+            $bind[':date_from'] = $_GET['date_from'];
+        }
+        if (!empty($_GET['date_to'])) {
+            $where[] = 'transaction_date <= :date_to';
+            $bind[':date_to'] = $_GET['date_to'];
+        }
+
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        // By category
+        $catStmt = $pdo->prepare(
+            "SELECT charge_category,
+                    COUNT(*) AS transaction_count,
+                    SUM(amount) AS total_amount,
+                    SUM(fees) AS total_fees,
+                    SUM(net_amount) AS total_net
+             FROM CG_PayPalTransactions
+             {$whereClause}
+             GROUP BY charge_category
+             ORDER BY charge_category"
+        );
+        $catStmt->execute($bind);
+        $byCategory = $catStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($byCategory as &$row) {
+            $row['transaction_count'] = (int) $row['transaction_count'];
+            $row['total_amount'] = round((float) $row['total_amount'], 2);
+            $row['total_fees'] = round((float) $row['total_fees'], 2);
+            $row['total_net'] = round((float) $row['total_net'], 2);
+        }
+        unset($row);
+
+        // By type within each category
+        $typeStmt = $pdo->prepare(
+            "SELECT charge_category, type, status,
+                    COUNT(*) AS transaction_count,
+                    SUM(amount) AS total_amount,
+                    SUM(fees) AS total_fees,
+                    SUM(net_amount) AS total_net
+             FROM CG_PayPalTransactions
+             {$whereClause}
+             GROUP BY charge_category, type, status
+             ORDER BY charge_category, type, status"
+        );
+        $typeStmt->execute($bind);
+        $byType = $typeStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($byType as &$row) {
+            $row['transaction_count'] = (int) $row['transaction_count'];
+            $row['total_amount'] = round((float) $row['total_amount'], 2);
+            $row['total_fees'] = round((float) $row['total_fees'], 2);
+            $row['total_net'] = round((float) $row['total_net'], 2);
+        }
+        unset($row);
+
+        // By status overall
+        $statusStmt = $pdo->prepare(
+            "SELECT status,
+                    COUNT(*) AS transaction_count,
+                    SUM(amount) AS total_amount,
+                    SUM(fees) AS total_fees
+             FROM CG_PayPalTransactions
+             {$whereClause}
+             GROUP BY status
+             ORDER BY status"
+        );
+        $statusStmt->execute($bind);
+        $byStatus = $statusStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($byStatus as &$row) {
+            $row['transaction_count'] = (int) $row['transaction_count'];
+            $row['total_amount'] = round((float) $row['total_amount'], 2);
+            $row['total_fees'] = round((float) $row['total_fees'], 2);
+        }
+        unset($row);
+
+        jsonResponse([
+            'by_category' => $byCategory,
+            'by_type'     => $byType,
+            'by_status'   => $byStatus,
+        ]);
+    }
+
+    /**
+     * GET /api/paypal/reconciliation
+     * Monthly reconciliation: amounts broken out by category with grand totals.
+     */
+    public function getReconciliation(array $params = []): void
+    {
+        $pdo = cg_db();
+
+        $sql = "SELECT
+                    DATE_FORMAT(transaction_date, '%Y-%m') AS month,
+                    SUM(CASE WHEN charge_category = 'purchase' THEN amount ELSE 0 END) AS purchases,
+                    SUM(CASE WHEN charge_category = 'refund' THEN amount ELSE 0 END) AS refunds,
+                    SUM(CASE WHEN charge_category = 'income' THEN amount ELSE 0 END) AS income,
+                    SUM(CASE WHEN charge_category = 'offset' THEN amount ELSE 0 END) AS offsets,
+                    SUM(CASE WHEN charge_category = 'auth' THEN amount ELSE 0 END) AS auths,
+                    SUM(CASE WHEN charge_category = 'withdrawal' THEN amount ELSE 0 END) AS withdrawals,
+                    SUM(fees) AS total_fees,
+                    SUM(amount) AS total_amount,
+                    SUM(net_amount) AS total_net,
+                    COUNT(*) AS transaction_count
+                FROM CG_PayPalTransactions
+                GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
+                ORDER BY month DESC";
+
+        $data = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+        $grandPurchases = 0; $grandRefunds = 0; $grandIncome = 0;
+        $grandOffsets = 0; $grandFees = 0; $grandTotal = 0;
+        $grandNet = 0; $grandCount = 0; $grandWithdrawals = 0;
+
+        foreach ($data as &$row) {
+            $row['purchases']    = round((float) $row['purchases'], 2);
+            $row['refunds']      = round((float) $row['refunds'], 2);
+            $row['income']       = round((float) $row['income'], 2);
+            $row['offsets']      = round((float) $row['offsets'], 2);
+            $row['auths']        = round((float) $row['auths'], 2);
+            $row['withdrawals']  = round((float) $row['withdrawals'], 2);
+            $row['total_fees']   = round((float) $row['total_fees'], 2);
+            $row['total_amount'] = round((float) $row['total_amount'], 2);
+            $row['total_net']    = round((float) $row['total_net'], 2);
+            $row['transaction_count'] = (int) $row['transaction_count'];
+
+            $grandPurchases += $row['purchases'];
+            $grandRefunds   += $row['refunds'];
+            $grandIncome    += $row['income'];
+            $grandOffsets   += $row['offsets'];
+            $grandWithdrawals += $row['withdrawals'];
+            $grandFees      += $row['total_fees'];
+            $grandTotal     += $row['total_amount'];
+            $grandNet       += $row['total_net'];
+            $grandCount     += $row['transaction_count'];
+        }
+        unset($row);
+
+        jsonResponse([
+            'monthly' => $data,
+            'totals'  => [
+                'purchases'         => round($grandPurchases, 2),
+                'refunds'           => round($grandRefunds, 2),
+                'income'            => round($grandIncome, 2),
+                'offsets'           => round($grandOffsets, 2),
+                'withdrawals'       => round($grandWithdrawals, 2),
+                'total_fees'        => round($grandFees, 2),
+                'total_amount'      => round($grandTotal, 2),
+                'total_net'         => round($grandNet, 2),
+                'transaction_count' => $grandCount,
+            ],
+        ]);
+    }
+
+    /**
      * GET /api/paypal/types
      * Distinct transaction types for filter dropdown.
      */

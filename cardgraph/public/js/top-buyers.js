@@ -47,7 +47,7 @@ const TopBuyers = {
     async loadLivestreams() {
         try {
             App.showLoading();
-            const result = await API.cachedGet('/api/top-buyers/livestreams', null, 60000);
+            const result = await API.get('/api/top-buyers/livestreams');
             this.livestreams = result.data || [];
             const years = result.years || [];
 

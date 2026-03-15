@@ -4,45 +4,6 @@
  */
 const API = {
     csrfToken: null,
-    _cache: {},
-    _inflight: {},
-
-    /**
-     * Cached GET with TTL (default 30s). Returns cached data if fresh.
-     * Deduplicates in-flight requests to the same URL.
-     */
-    async cachedGet(url, params, ttl = 30000) {
-        const cacheKey = url + '|' + JSON.stringify(params || {});
-        const cached = this._cache[cacheKey];
-        if (cached && Date.now() - cached.time < ttl) {
-            return cached.data;
-        }
-        // Deduplicate: if same request is already in-flight, return that promise
-        if (this._inflight[cacheKey]) {
-            return this._inflight[cacheKey];
-        }
-        const promise = this.get(url, params).then(data => {
-            this._cache[cacheKey] = { data, time: Date.now() };
-            delete this._inflight[cacheKey];
-            return data;
-        }).catch(err => {
-            delete this._inflight[cacheKey];
-            throw err;
-        });
-        this._inflight[cacheKey] = promise;
-        return promise;
-    },
-
-    /**
-     * Clear cached responses. Pass a URL prefix to clear specific caches,
-     * or call with no args to clear everything.
-     */
-    clearCache(urlPrefix) {
-        if (!urlPrefix) { this._cache = {}; return; }
-        for (const key in this._cache) {
-            if (key.startsWith(urlPrefix)) delete this._cache[key];
-        }
-    },
 
     async request(method, url, data = null) {
         const opts = {

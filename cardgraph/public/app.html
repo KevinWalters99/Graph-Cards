@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Card Graph - Auction Tracker</title>
-    <link rel="stylesheet" href="/css/app.css?v=20260314a">
+    <link rel="stylesheet" href="/css/app.css?v=20260314e">
 </head>
 <body>
     <div id="app">
@@ -43,6 +43,14 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                     Analytics
                 </li>
+                <li data-tab="cards-analytics" style="padding-left:38px;font-size:13px;">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6" y2="6"/><line x1="6" y1="18" x2="6" y2="18"/></svg>
+                    Cards Analytics
+                </li>
+                <li data-tab="sessions">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Sessions
+                </li>
             </ul>
             <ul class="nav-tabs nav-tabs-bottom">
                 <li data-tab="ebay">
@@ -52,6 +60,10 @@
                 <li data-tab="mlb">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93c4.08 2.38 8.06 7.16 10.14 14.14"/><path d="M19.07 4.93c-4.08 2.38-8.06 7.16-10.14 14.14"/></svg>
                     MLB
+                </li>
+                <li data-tab="milb" style="padding-left:38px;font-size:13px;">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93c4.08 2.38 8.06 7.16 10.14 14.14"/><path d="M19.07 4.93c-4.08 2.38-8.06 7.16-10.14 14.14"/></svg>
+                    MiLB
                 </li>
                 <li data-tab="maintenance">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -87,7 +99,10 @@
             <div id="tab-paypal" class="tab-panel"></div>
             <div id="tab-ebay" class="tab-panel"></div>
             <div id="tab-analytics" class="tab-panel"></div>
+            <div id="tab-cards-analytics" class="tab-panel"></div>
+            <div id="tab-sessions" class="tab-panel"></div>
             <div id="tab-mlb" class="tab-panel"></div>
+            <div id="tab-milb" class="tab-panel"></div>
             <div id="tab-maintenance" class="tab-panel"></div>
         </main>
     </div>
@@ -101,28 +116,32 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/js/api.js?v=20260314a"></script>
-    <script src="/js/filters.js?v=20260220e"></script>
-    <script src="/js/table.js?v=20260220e"></script>
-    <script src="/js/upload.js?v=20260220e"></script>
-    <script src="/js/dashboard.js?v=20260314a"></script>
-    <script src="/js/line-items.js?v=20260220e"></script>
-    <script src="/js/payouts.js?v=20260220e"></script>
-    <script src="/js/top-buyers.js?v=20260314a"></script>
-    <script src="/js/financial-summary.js?v=20260314a"></script>
-    <script src="/js/paypal.js?v=20260222b"></script>
-    <script src="/js/ebay.js?v=20260220e"></script>
+    <script src="/js/api.js?v=20260314e"></script>
+    <script src="/js/filters.js?v=20260314e"></script>
+    <script src="/js/table.js?v=20260314e"></script>
+    <script src="/js/upload.js?v=20260314e"></script>
+    <script src="/js/dashboard.js?v=20260314e"></script>
+    <script src="/js/line-items.js?v=20260314e"></script>
+    <script src="/js/payouts.js?v=20260314e"></script>
+    <script src="/js/top-buyers.js?v=20260314e"></script>
+    <script src="/js/financial-summary.js?v=20260314e"></script>
+    <script src="/js/paypal.js?v=20260314e"></script>
+    <script src="/js/ebay.js?v=20260314e"></script>
     <script src="/js/vendor/chart.min.js"></script>
-    <script src="/js/analytics.js?v=20260314a"></script>
-    <script src="/js/analytics-admin.js?v=20260220e"></script>
-    <script src="/js/cost-matrix.js?v=20260220e"></script>
-    <script src="/js/alerts.js?v=20260314a"></script>
-    <script src="/js/transcription.js?v=20260314a"></script>
-    <script src="/js/table-transcription.js?v=20260314a"></script>
-    <script src="/js/parser.js?v=20260314a"></script>
-    <script src="/js/mlb.js?v=20260314a"></script>
-    <script src="/js/maintenance.js?v=20260221e"></script>
-    <script src="/js/auth.js?v=20260220e"></script>
-    <script src="/js/app.js?v=20260314a"></script>
+    <script src="/js/analytics.js?v=20260314e"></script>
+    <script src="/js/analytics-admin.js?v=20260314e"></script>
+    <script src="/js/cost-matrix.js?v=20260314e"></script>
+    <script src="/js/alerts.js?v=20260314e"></script>
+    <script src="/js/transcription.js?v=20260314e"></script>
+    <script src="/js/table-transcription.js?v=20260314e"></script>
+    <script src="/js/parser.js?v=20260314e"></script>
+    <script src="/js/mlb.js?v=20260314e"></script>
+    <script src="/js/maintenance.js?v=20260314e"></script>
+    <script src="/js/cards-analytics.js?v=20260314e"></script>
+    <script src="/js/sessions.js?v=20260314e"></script>
+    <script src="/js/classifications.js?v=20260314e"></script>
+    <script src="/js/ai-parse.js?v=20260314e"></script>
+    <script src="/js/auth.js?v=20260314e"></script>
+    <script src="/js/app.js?v=20260314e"></script>
 </body>
 </html>

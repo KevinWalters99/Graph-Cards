@@ -106,7 +106,7 @@ var TableTranscriptionAdmin = {
                 var txPending = parseInt(s.tx_pending) || 0;
                 var totalSegs = parseInt(s.total_segments) || 0;
 
-                var label = 'S' + s.session_id + ' — ' + App.escHtml(s.auction_name);
+                var label = 'S' + s.session_id + ' — ' + self.escHtml(s.auction_name);
                 if (totalSegs > 0) {
                     label += ' (' + txComplete + '/' + totalSegs + ' transcribed)';
                 }
@@ -244,13 +244,13 @@ var TableTranscriptionAdmin = {
             h += '<span style="font-weight:600;">Run #' + run.run_id + '</span>';
         }
 
-        h += '<span>' + App.escHtml(run.started_at || '') + '</span>';
+        h += '<span>' + this.escHtml(run.started_at || '') + '</span>';
         h += '<span>' + (run.total_records || 0) + ' records</span>';
         h += '<span class="tt-confidence-high" style="padding:2px 8px;border-radius:4px;">' + (run.high_confidence || 0) + ' high</span>';
         h += '<span class="tt-confidence-low" style="padding:2px 8px;border-radius:4px;">' + (run.low_confidence || 0) + ' low</span>';
 
         if (run.status === 'error') {
-            h += '<span class="text-danger" style="font-size:12px;">Error: ' + App.escHtml(run.error_message || 'Unknown') + '</span>';
+            h += '<span class="text-danger" style="font-size:12px;">Error: ' + this.escHtml(run.error_message || 'Unknown') + '</span>';
         }
 
         h += '</div>';
@@ -280,7 +280,7 @@ var TableTranscriptionAdmin = {
             self.applyFilters();
         }).catch(function(err) {
             document.getElementById('tt-results').innerHTML =
-                '<p class="text-danger">Failed to load records: ' + App.escHtml(err.message) + '</p>';
+                '<p class="text-danger">Failed to load records: ' + self.escHtml(err.message) + '</p>';
         });
     },
 
@@ -331,9 +331,9 @@ var TableTranscriptionAdmin = {
             if (parseInt(rec.is_autograph)) desc.push('<span class="tt-chip tt-chip-auto">Auto</span>');
             if (parseInt(rec.is_relic)) desc.push('<span class="tt-chip tt-chip-relic">Relic</span>');
             if (parseInt(rec.is_giveaway)) desc.push('<span class="tt-chip tt-chip-give">Giveaway</span>');
-            if (rec.raw_parallel) desc.push('<span class="tt-chip">' + App.escHtml(rec.raw_parallel) + '</span>');
-            if (rec.raw_card_number) desc.push('<span class="tt-chip">' + App.escHtml(rec.raw_card_number) + '</span>');
-            if (rec.specialty_name) desc.push('<span class="tt-chip">' + App.escHtml(rec.specialty_name) + '</span>');
+            if (rec.raw_parallel) desc.push('<span class="tt-chip">' + self.escHtml(rec.raw_parallel) + '</span>');
+            if (rec.raw_card_number) desc.push('<span class="tt-chip">' + self.escHtml(rec.raw_card_number) + '</span>');
+            if (rec.specialty_name) desc.push('<span class="tt-chip">' + self.escHtml(rec.specialty_name) + '</span>');
 
             var verifiedIcon = parseInt(rec.is_verified) ? ' <span title="Verified" style="color:#4caf50;">&#10003;</span>' : '';
 
@@ -342,7 +342,7 @@ var TableTranscriptionAdmin = {
             if (rec.team_mlb_id) {
                 teamHtml += '<img class="tt-team-logo" src="/img/teams/' + rec.team_mlb_id + '.png" alt="">';
             }
-            teamHtml += App.escHtml(rec.team_abbr || rec.team_name || '-');
+            teamHtml += self.escHtml(rec.team_abbr || rec.team_name || '-');
 
             // Format estimated time (show just HH:MM:SS)
             var timeStr = '-';
@@ -357,10 +357,10 @@ var TableTranscriptionAdmin = {
             h += '<td>' + rec.sequence_number + '</td>';
             h += '<td class="tt-time-cell">' + timeStr + '</td>';
             h += '<td>' + (rec.lot_number || '-') + '</td>';
-            h += '<td>' + App.escHtml(rec.player_name || rec.raw_player || '???') + verifiedIcon + '</td>';
+            h += '<td>' + self.escHtml(rec.player_name || rec.raw_player || '???') + verifiedIcon + '</td>';
             h += '<td>' + teamHtml + '</td>';
-            h += '<td>' + App.escHtml(rec.maker_name || rec.raw_maker || '-') + '</td>';
-            h += '<td>' + App.escHtml(rec.style_name || rec.raw_style || '-') + '</td>';
+            h += '<td>' + self.escHtml(rec.maker_name || rec.raw_maker || '-') + '</td>';
+            h += '<td>' + self.escHtml(rec.style_name || rec.raw_style || '-') + '</td>';
             h += '<td>' + (desc.length ? desc.join(' ') : '-') + '</td>';
             h += '<td><span class="tt-confidence ' + confClass + '">' + conf.toFixed(2) + '</span></td>';
             h += '<td style="cursor:pointer;font-size:16px;" class="tt-expand-toggle" data-rid="' + rid + '">&#9660;</td>';
@@ -434,7 +434,7 @@ var TableTranscriptionAdmin = {
         if (rec.raw_text_excerpt) {
             h += '<div class="tt-raw-excerpt">';
             h += '<strong style="font-size:11px;color:#666;">Raw Text Excerpt:</strong><br>';
-            h += '<div class="tt-excerpt-text">' + App.escHtml(rec.raw_text_excerpt) + '</div>';
+            h += '<div class="tt-excerpt-text">' + self.escHtml(rec.raw_text_excerpt) + '</div>';
             h += '</div>';
         }
 
@@ -469,7 +469,7 @@ var TableTranscriptionAdmin = {
         // Notes
         h += '<div class="tt-edit-field" style="grid-column: span 2;">';
         h += '<label>Notes</label>';
-        h += '<textarea class="form-control form-control-sm" id="tt-edit-notes-' + recordId + '" rows="2">' + App.escHtml(rec.notes || '') + '</textarea>';
+        h += '<textarea class="form-control form-control-sm" id="tt-edit-notes-' + recordId + '" rows="2">' + self.escHtml(rec.notes || '') + '</textarea>';
         h += '</div>';
 
         h += '</div>';
@@ -605,7 +605,7 @@ var TableTranscriptionAdmin = {
             segments.forEach(function(seg) {
                 h += '<div style="margin-bottom:16px;">';
                 h += '<div style="font-weight:600;font-size:12px;color:#1565c0;margin-bottom:4px;">Segment ' + seg.segment_number + '</div>';
-                h += '<div class="tt-excerpt-text" style="font-size:12px;max-height:200px;overflow-y:auto;">' + App.escHtml(seg.text) + '</div>';
+                h += '<div class="tt-excerpt-text" style="font-size:12px;max-height:200px;overflow-y:auto;">' + self.escHtml(seg.text) + '</div>';
                 h += '</div>';
             });
 
@@ -617,6 +617,11 @@ var TableTranscriptionAdmin = {
     },
 
     // ─── Helpers ─────────────────────────────────────────────
+
+    escHtml: function(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    },
 
     escAttr: function(s) {
         if (!s) return '';

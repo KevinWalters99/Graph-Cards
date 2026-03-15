@@ -210,6 +210,184 @@ class FinancialSummaryController
     }
 
     /**
+     * GET /api/financial-summary/monthly
+     * Returns monthly breakdown with sub-components:
+     *   - Auction earnings, fees, item costs (from CG_AuctionLineItems + CG_ItemCosts)
+     *   - General costs (from CG_GeneralCosts)
+     *   - Payouts (from CG_Payouts)
+     *   - PayPal purchases/refunds/income (from CG_PayPalTransactions)
+     */
+    public function monthly(array $params = []): void
+    {
+        $pdo = cg_db();
+
+        // Get excluded status IDs
+        $excludedStatuses = $pdo->query(
+            "SELECT status_type_id FROM CG_StatusTypes
+             WHERE status_name IN ('Cancelled', 'Refused', 'Did Not Pay', 'Returned', 'Disputed')"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        $excludeList = implode(',', array_map('intval', $excludedStatuses));
+        $statusFilter = $excludeList ? "AND a.current_status_id NOT IN ({$excludeList})" : '';
+
+        // Monthly auction data
+        $monthlySql = "SELECT
+            DATE_FORMAT(a.order_placed_at, '%Y-%m') AS month,
+            COUNT(*) AS total_items,
+            SUM(a.quantity_sold) AS total_quantity,
+            SUM(CASE WHEN a.buy_format = 'AUCTION' THEN 1 ELSE 0 END) AS auction_count,
+            SUM(CASE WHEN a.buy_format = 'GIVEAWAY' THEN 1 ELSE 0 END) AS giveaway_count,
+            COALESCE(SUM(a.transaction_amount), 0) AS total_earnings,
+            COALESCE(SUM(
+                COALESCE(a.commission_fee, 0) +
+                COALESCE(a.payment_processing_fee, 0) +
+                COALESCE(a.tax_on_commission_fee, 0) +
+                COALESCE(a.tax_on_payment_processing_fee, 0) +
+                COALESCE(a.shipping_fee, 0)
+            ), 0) AS total_fees,
+            COALESCE(SUM(a.shipping_fee), 0) AS total_shipping,
+            COALESCE(SUM(CASE WHEN a.buy_format = 'AUCTION' THEN a.original_item_price ELSE 0 END), 0) AS total_item_price,
+            COUNT(DISTINCT a.buyer_id) AS unique_buyers,
+            COUNT(DISTINCT a.livestream_id) AS unique_livestreams
+        FROM CG_AuctionLineItems a
+        WHERE a.order_placed_at IS NOT NULL
+          {$statusFilter}
+        GROUP BY DATE_FORMAT(a.order_placed_at, '%Y-%m')
+        ORDER BY month DESC";
+
+        $monthly = $pdo->query($monthlySql)->fetchAll(PDO::FETCH_ASSOC);
+
+        // Collect all months present
+        $allMonths = [];
+        foreach ($monthly as $row) {
+            $allMonths[$row['month']] = true;
+        }
+
+        // Payouts by month
+        $payoutsByMonth = $pdo->query(
+            "SELECT DATE_FORMAT(date_initiated, '%Y-%m') AS month,
+                    COALESCE(SUM(amount), 0) AS total_payouts,
+                    COUNT(*) AS payout_count
+             FROM CG_Payouts WHERE status != 'Failed'
+             GROUP BY DATE_FORMAT(date_initiated, '%Y-%m')"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $payoutsMap = [];
+        foreach ($payoutsByMonth as $row) {
+            $payoutsMap[$row['month']] = $row;
+            $allMonths[$row['month']] = true;
+        }
+
+        // Item costs by month
+        $itemCostsByMonth = $pdo->query(
+            "SELECT DATE_FORMAT(a.order_placed_at, '%Y-%m') AS month,
+                    COALESCE(SUM(c.cost_amount), 0) AS total_item_costs
+             FROM CG_ItemCosts c
+             JOIN CG_AuctionLineItems a ON a.ledger_transaction_id = c.ledger_transaction_id
+             WHERE a.order_placed_at IS NOT NULL {$statusFilter}
+             GROUP BY DATE_FORMAT(a.order_placed_at, '%Y-%m')"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $itemCostsMap = [];
+        foreach ($itemCostsByMonth as $row) {
+            $itemCostsMap[$row['month']] = round((float) $row['total_item_costs'], 2);
+            $allMonths[$row['month']] = true;
+        }
+
+        // General costs by month
+        $genCostsByMonth = $pdo->query(
+            "SELECT DATE_FORMAT(cost_date, '%Y-%m') AS month,
+                    COALESCE(SUM(total), 0) AS total_general_costs
+             FROM CG_GeneralCosts
+             GROUP BY DATE_FORMAT(cost_date, '%Y-%m')"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $genCostsMap = [];
+        foreach ($genCostsByMonth as $row) {
+            $genCostsMap[$row['month']] = round((float) $row['total_general_costs'], 2);
+            $allMonths[$row['month']] = true;
+        }
+
+        // PayPal by month (purchases as costs, income as revenue)
+        $ppByMonth = $pdo->query(
+            "SELECT DATE_FORMAT(transaction_date, '%Y-%m') AS month,
+                    COALESCE(SUM(CASE WHEN charge_category = 'purchase' THEN amount ELSE 0 END), 0) AS pp_purchases,
+                    COALESCE(SUM(CASE WHEN charge_category = 'refund' THEN amount ELSE 0 END), 0) AS pp_refunds,
+                    COALESCE(SUM(CASE WHEN charge_category = 'income' THEN amount ELSE 0 END), 0) AS pp_income,
+                    COALESCE(SUM(fees), 0) AS pp_fees,
+                    COUNT(*) AS pp_transaction_count
+             FROM CG_PayPalTransactions
+             WHERE charge_category IN ('purchase', 'refund', 'income')
+             GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $ppMap = [];
+        foreach ($ppByMonth as $row) {
+            $ppMap[$row['month']] = $row;
+            $allMonths[$row['month']] = true;
+        }
+
+        // Build monthly map from auction data
+        $monthlyMap = [];
+        foreach ($monthly as $row) {
+            $monthlyMap[$row['month']] = $row;
+        }
+
+        // Merge all data
+        $result = [];
+        foreach ($allMonths as $month => $_) {
+            $auc = $monthlyMap[$month] ?? [];
+            $pay = $payoutsMap[$month] ?? [];
+            $pp = $ppMap[$month] ?? [];
+
+            $totalItemPrice = round((float) ($auc['total_item_price'] ?? 0), 2);
+            $totalFees = round((float) ($auc['total_fees'] ?? 0), 2);
+            $totalItemCosts = $itemCostsMap[$month] ?? 0;
+            $totalGeneralCosts = $genCostsMap[$month] ?? 0;
+            $ppPurchases = round((float) ($pp['pp_purchases'] ?? 0), 2);
+            $ppRefunds = round((float) ($pp['pp_refunds'] ?? 0), 2);
+            $ppIncome = round((float) ($pp['pp_income'] ?? 0), 2);
+            $ppFees = round((float) ($pp['pp_fees'] ?? 0), 2);
+
+            // Auction-only net (without PayPal)
+            $auctionNet = round($totalItemPrice - $totalFees - $totalItemCosts, 2);
+            // Comprehensive net includes all cost/income sources
+            $comprehensiveNet = round(
+                $totalItemPrice - $totalFees - $totalItemCosts - $totalGeneralCosts
+                + $ppPurchases + $ppIncome + $ppRefunds,
+                2
+            );
+
+            $result[] = [
+                'month' => $month,
+                'total_items' => (int) ($auc['total_items'] ?? 0),
+                'total_quantity' => (int) ($auc['total_quantity'] ?? 0),
+                'auction_count' => (int) ($auc['auction_count'] ?? 0),
+                'giveaway_count' => (int) ($auc['giveaway_count'] ?? 0),
+                'total_earnings' => round((float) ($auc['total_earnings'] ?? 0), 2),
+                'total_fees' => $totalFees,
+                'total_shipping' => round((float) ($auc['total_shipping'] ?? 0), 2),
+                'total_item_price' => $totalItemPrice,
+                'unique_buyers' => (int) ($auc['unique_buyers'] ?? 0),
+                'unique_livestreams' => (int) ($auc['unique_livestreams'] ?? 0),
+                'total_payouts' => round((float) ($pay['total_payouts'] ?? 0), 2),
+                'payout_count' => (int) ($pay['payout_count'] ?? 0),
+                'total_item_costs' => $totalItemCosts,
+                'total_general_costs' => $totalGeneralCosts,
+                'pp_purchases' => $ppPurchases,
+                'pp_refunds' => $ppRefunds,
+                'pp_income' => $ppIncome,
+                'pp_fees' => $ppFees,
+                'pp_transaction_count' => (int) ($pp['pp_transaction_count'] ?? 0),
+                'auction_net' => $auctionNet,
+                'net' => $comprehensiveNet,
+            ];
+        }
+
+        // Sort descending by month
+        usort($result, function ($a, $b) {
+            return strcmp($b['month'], $a['month']);
+        });
+
+        jsonResponse(['monthly' => $result]);
+    }
+
+    /**
      * GET /api/financial-summary/costs
      */
     public function listCosts(array $params = []): void

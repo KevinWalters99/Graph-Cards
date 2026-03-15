@@ -24,6 +24,8 @@ var TranscriptionAdmin = {
             html.push('<div class="tx-sub-tabs" id="tx-sub-tabs">');
             html.push('<button class="tx-sub-tab active" data-subtab="audio">Audio</button>');
             html.push('<button class="tx-sub-tab" data-subtab="table">Table</button>');
+            html.push('<button class="tx-sub-tab" data-subtab="classifiers">Classifiers</button>');
+            html.push('<button class="tx-sub-tab" data-subtab="aiparse">AI Parse</button>');
             html.push('</div>');
 
             // Audio sub-panel (existing transcription content)
@@ -63,6 +65,12 @@ var TranscriptionAdmin = {
             // Table sub-panel (new — rendered by TableTranscriptionAdmin)
             html.push('<div id="tx-panel-table" class="tx-sub-panel" style="display:none;"></div>');
 
+            // Classifiers sub-panel
+            html.push('<div id="tx-panel-classifiers" class="tx-sub-panel" style="display:none;"></div>');
+
+            // AI Parse sub-panel
+            html.push('<div id="tx-panel-aiparse" class="tx-sub-panel" style="display:none;"></div>');
+
             panel.innerHTML = html.join('\n');
 
             var self = this;
@@ -97,8 +105,12 @@ var TranscriptionAdmin = {
         // Toggle panel visibility
         var audioPanel = document.getElementById('tx-panel-audio');
         var tablePanel = document.getElementById('tx-panel-table');
+        var classifiersPanel = document.getElementById('tx-panel-classifiers');
+        var aiparsePanel = document.getElementById('tx-panel-aiparse');
         if (audioPanel) audioPanel.style.display = (name === 'audio') ? '' : 'none';
         if (tablePanel) tablePanel.style.display = (name === 'table') ? '' : 'none';
+        if (classifiersPanel) classifiersPanel.style.display = (name === 'classifiers') ? '' : 'none';
+        if (aiparsePanel) aiparsePanel.style.display = (name === 'aiparse') ? '' : 'none';
 
         // Load appropriate content
         if (name === 'audio') {
@@ -107,6 +119,14 @@ var TranscriptionAdmin = {
         } else if (name === 'table') {
             if (typeof TableTranscriptionAdmin !== 'undefined') {
                 TableTranscriptionAdmin.init();
+            }
+        } else if (name === 'classifiers') {
+            if (typeof ClassificationsAdmin !== 'undefined') {
+                ClassificationsAdmin.init();
+            }
+        } else if (name === 'aiparse') {
+            if (typeof AiParseAdmin !== 'undefined') {
+                AiParseAdmin.init();
             }
         }
     },
@@ -343,7 +363,7 @@ var TranscriptionAdmin = {
             '<div class="tx-env-icon ' + cls + '">' + icon + '</div>' +
             '<div class="tx-env-details">' +
             '<div class="tx-env-name">' + name + '</div>' +
-            '<div class="tx-env-version">' + App.escHtml(detail) + '</div>' +
+            '<div class="tx-env-version">' + this.escHtml(detail) + '</div>' +
             '</div></div>';
     },
 
@@ -391,7 +411,7 @@ var TranscriptionAdmin = {
             }
 
             html.push('<tr>');
-            html.push('<td>' + App.escHtml(s.auction_name) + '</td>');
+            html.push('<td>' + this.escHtml(s.auction_name) + '</td>');
             html.push('<td>' + App.formatDatetime(s.scheduled_start) + '</td>');
             html.push('<td><span class="status-badge ' + statusCls + '">' + s.status + '</span></td>');
             html.push('<td class="text-right">' + totalSegs + '</td>');
@@ -696,7 +716,6 @@ var TranscriptionAdmin = {
         this.stopPcPolling();
         var self = this;
         this.pcPollTimer = setInterval(function() {
-            if (document.hidden) return;
             var dot = document.getElementById('tx-pc-dot');
             if (!dot) { self.stopPcPolling(); return; }
 
@@ -880,7 +899,7 @@ var TranscriptionAdmin = {
             // Header
             html.push('<div class="tx-monitor-header">');
             html.push('<div>');
-            html.push('<span class="tx-session-name">' + App.escHtml(s.auction_name) + '</span>');
+            html.push('<span class="tx-session-name">' + self.escHtml(s.auction_name) + '</span>');
             html.push(' <span class="status-badge status-' + s.status + '">' + s.status + '</span>');
             html.push('</div>');
             html.push('<div style="display:flex;align-items:center;gap:16px;">');
@@ -1000,7 +1019,7 @@ var TranscriptionAdmin = {
         this.stopPolling();
         var self = this;
         this.pollTimer = setInterval(function() {
-            if (!document.hidden) self.pollSessionStatus(sessionId);
+            self.pollSessionStatus(sessionId);
         }, 3000);
     },
 
@@ -1158,7 +1177,7 @@ var TranscriptionAdmin = {
         return '<div class="tx-log-entry">' +
             '<span class="log-time">[' + time + ']</span> ' +
             '<span class="' + cls + '">[' + log.log_level.toUpperCase() + ']</span> ' +
-            App.escHtml(log.message) +
+            this.escHtml(log.message) +
             '</div>';
     },
 
@@ -1187,6 +1206,13 @@ var TranscriptionAdmin = {
         if (!dt) return '';
         // Convert "2026-02-20 19:00:00" to "2026-02-20T19:00" for datetime-local input
         return dt.replace(' ', 'T').substring(0, 16);
+    },
+
+    escHtml: function(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     },
 
     escAttr: function(str) {

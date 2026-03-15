@@ -50,6 +50,7 @@ $router->get('/api/top-buyers', ['TopBuyersController', 'index']);
 
 // === Financial Summary ===
 $router->get('/api/financial-summary/overview', ['FinancialSummaryController', 'overview']);
+$router->get('/api/financial-summary/monthly', ['FinancialSummaryController', 'monthly']);
 $router->get('/api/financial-summary/costs', ['FinancialSummaryController', 'listCosts']);
 $router->post('/api/financial-summary/costs', ['FinancialSummaryController', 'createCost']);
 $router->put('/api/financial-summary/costs/{id}', ['FinancialSummaryController', 'updateCost']);
@@ -106,7 +107,10 @@ $router->post('/api/paypal/auto-assign',        ['PayPalController', 'autoAssign
 $router->post('/api/paypal/lock',               ['PayPalController', 'lockAllocations']);
 $router->post('/api/paypal/unlock',             ['PayPalController', 'unlockAllocations']);
 $router->get('/api/paypal/assignments/summary', ['PayPalController', 'getAssignmentSummary']);
+$router->get('/api/paypal/breakdown',           ['PayPalController', 'getBreakdown']);
+$router->get('/api/paypal/reconciliation',      ['PayPalController', 'getReconciliation']);
 $router->post('/api/uploads/paypal',            ['UploadController', 'paypal']);
+$router->post('/api/uploads/general-costs',    ['UploadController', 'generalCosts']);
 
 // === Alerts & Notifications ===
 $router->get('/api/alerts',                  ['AlertController', 'listAlerts']);

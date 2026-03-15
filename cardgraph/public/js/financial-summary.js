@@ -1,11 +1,13 @@
 /**
  * Card Graph - Financial Summary Tab
- * Sub-tabs: Summary Overview, General Costs
+ * Sub-tabs: Summary Overview, Monthly Overview, General Costs
  */
 const FinancialSummary = {
     initialized: false,
     currentSubTab: 'overview',
     costs: [],
+    monthlyData: null,
+    collapsed: {},  // tracks collapsed state: { '2025': true, '2025-Q1': true }
 
     async init() {
         const panel = document.getElementById('tab-financial-summary');
@@ -17,9 +19,11 @@ const FinancialSummary = {
                 </div>
                 <div class="sub-tabs" id="fs-sub-tabs">
                     <button class="sub-tab active" data-subtab="overview">Summary Overview</button>
+                    <button class="sub-tab" data-subtab="monthly">Monthly Overview</button>
                     <button class="sub-tab" data-subtab="costs">General Costs</button>
                 </div>
                 <div id="fs-overview" class="sub-panel"></div>
+                <div id="fs-monthly" class="sub-panel" style="display:none;"></div>
                 <div id="fs-costs" class="sub-panel" style="display:none;"></div>
             `;
 
@@ -39,9 +43,11 @@ const FinancialSummary = {
             btn.classList.toggle('active', btn.dataset.subtab === name);
         });
         document.getElementById('fs-overview').style.display = name === 'overview' ? '' : 'none';
+        document.getElementById('fs-monthly').style.display = name === 'monthly' ? '' : 'none';
         document.getElementById('fs-costs').style.display = name === 'costs' ? '' : 'none';
 
         if (name === 'overview') this.loadOverview();
+        if (name === 'monthly') this.loadMonthly();
         if (name === 'costs') this.loadCosts();
     },
 
@@ -51,7 +57,7 @@ const FinancialSummary = {
     async loadOverview() {
         try {
             App.showLoading();
-            const data = await API.cachedGet('/api/financial-summary/overview', null, 120000);
+            const data = await API.get('/api/financial-summary/overview');
             this.renderOverview(data);
         } catch (err) {
             App.toast(err.message, 'error');
@@ -156,14 +162,23 @@ const FinancialSummary = {
         const container = document.getElementById('fs-costs');
 
         container.innerHTML = `
-            <div style="margin-bottom:16px;">
+            <div style="margin-bottom:16px;display:flex;gap:8px;">
                 <button class="btn btn-success" id="btn-add-general-cost">Add Cost</button>
+                <button class="btn btn-primary" id="btn-import-general-costs">Import CSV</button>
             </div>
             <div id="fs-costs-table"></div>
         `;
 
         document.getElementById('btn-add-general-cost').addEventListener('click', () => {
             this.showCostForm();
+        });
+        document.getElementById('btn-import-general-costs').addEventListener('click', () => {
+            Upload.showModal(
+                'Import General Costs CSV',
+                '/api/uploads/general-costs',
+                'CSV with Date, Description, Amount columns. Each row is imported as a lump-sum cost with quantity 1.',
+                () => { this.loadCosts(); }
+            );
         });
 
         DataTable.render(document.getElementById('fs-costs-table'), {
@@ -331,5 +346,250 @@ const FinancialSummary = {
         } catch (err) {
             App.toast(err.message, 'error');
         }
+    },
+
+    // =========================================================
+    // Monthly Overview
+    // =========================================================
+    async loadMonthly() {
+        try {
+            App.showLoading();
+            const result = await API.get('/api/financial-summary/monthly');
+            this.monthlyData = result.monthly || [];
+            this.renderMonthly();
+        } catch (err) {
+            document.getElementById('fs-monthly').innerHTML =
+                '<p class="text-muted" style="padding:24px;">Unable to load monthly data.</p>';
+            App.toast(err.message, 'error');
+        } finally {
+            App.hideLoading();
+        }
+    },
+
+    renderMonthly() {
+        const container = document.getElementById('fs-monthly');
+        const data = this.monthlyData;
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="padding:24px;">No monthly data available.</p>';
+            return;
+        }
+
+        const cur = (v) => App.formatCurrency(v);
+
+        // Group months into years and quarters
+        const years = {};
+        data.forEach(m => {
+            const [yr, mo] = m.month.split('-');
+            if (!years[yr]) years[yr] = { months: [], totals: this._emptyTotals() };
+            years[yr].months.push(m);
+            this._addToTotals(years[yr].totals, m);
+        });
+
+        // Sort years descending
+        const sortedYears = Object.keys(years).sort((a, b) => b - a);
+
+        let html = '<div class="mt-4">';
+
+        // Expand/Collapse All buttons
+        html += '<div style="display:flex;gap:8px;margin-bottom:16px;">';
+        html += '<button class="btn btn-secondary btn-sm" id="fs-expand-all">Expand All</button>';
+        html += '<button class="btn btn-secondary btn-sm" id="fs-collapse-all">Collapse All</button>';
+        html += '</div>';
+
+        html += '<div class="table-container"><table class="data-table fs-monthly-table">';
+
+        // Header
+        html += '<thead><tr>';
+        html += '<th style="min-width:200px;">Period</th>';
+        html += '<th style="text-align:right">Auctions</th>';
+        html += '<th style="text-align:right">Earnings</th>';
+        html += '<th style="text-align:right">Fees</th>';
+        html += '<th style="text-align:right">Item Costs</th>';
+        html += '<th style="text-align:right">Gen. Costs</th>';
+        html += '<th style="text-align:right">PayPal Out</th>';
+        html += '<th style="text-align:right">PayPal In</th>';
+        html += '<th style="text-align:right">Payouts</th>';
+        html += '<th style="text-align:right">Net</th>';
+        html += '</tr></thead><tbody>';
+
+        sortedYears.forEach(yr => {
+            const yearData = years[yr];
+            const yTot = yearData.totals;
+            const yearCollapsed = !!this.collapsed[yr];
+
+            // Year row (always visible, clickable)
+            html += `<tr class="fs-row-year" data-toggle="${yr}" style="cursor:pointer;background:#1a1a2e;color:#fff;">`;
+            html += `<td><span class="fs-toggle-icon">${yearCollapsed ? '&#9654;' : '&#9660;'}</span> <strong>${yr}</strong></td>`;
+            html += `<td style="text-align:right"><strong>${yTot.auction_count}</strong></td>`;
+            html += `<td style="text-align:right"><strong>${cur(yTot.total_earnings)}</strong></td>`;
+            html += `<td style="text-align:right"><strong>${cur(yTot.total_fees)}</strong></td>`;
+            html += `<td style="text-align:right"><strong>${cur(yTot.total_item_costs)}</strong></td>`;
+            html += `<td style="text-align:right"><strong>${cur(yTot.total_general_costs)}</strong></td>`;
+            html += `<td style="text-align:right"><strong>${cur(yTot.pp_purchases)}</strong></td>`;
+            html += `<td style="text-align:right"><strong>${cur(yTot.pp_income)}</strong></td>`;
+            html += `<td style="text-align:right"><strong>${cur(yTot.total_payouts)}</strong></td>`;
+            html += `<td style="text-align:right"><strong class="${yTot.net >= 0 ? 'text-success' : 'text-danger'}">${cur(yTot.net)}</strong></td>`;
+            html += '</tr>';
+
+            // Build quarters within this year
+            const quarters = {};
+            yearData.months.forEach(m => {
+                const mo = parseInt(m.month.split('-')[1]);
+                const q = Math.ceil(mo / 3);
+                const qKey = yr + '-Q' + q;
+                if (!quarters[qKey]) quarters[qKey] = { q: q, months: [], totals: this._emptyTotals() };
+                quarters[qKey].months.push(m);
+                this._addToTotals(quarters[qKey].totals, m);
+            });
+            const sortedQKeys = Object.keys(quarters).sort((a, b) => {
+                return parseInt(b.split('Q')[1]) - parseInt(a.split('Q')[1]);
+            });
+
+            sortedQKeys.forEach(qKey => {
+                const qData = quarters[qKey];
+                const qTot = qData.totals;
+                const qCollapsed = !!this.collapsed[qKey];
+                const hideQ = yearCollapsed ? 'display:none;' : '';
+
+                // Quarter row
+                html += `<tr class="fs-row-quarter fs-child-${yr}" data-toggle="${qKey}" style="cursor:pointer;background:#f0f2f5;${hideQ}">`;
+                html += `<td style="padding-left:24px;"><span class="fs-toggle-icon">${qCollapsed ? '&#9654;' : '&#9660;'}</span> <strong>Q${qData.q} ${yr}</strong></td>`;
+                html += `<td style="text-align:right"><strong>${qTot.auction_count}</strong></td>`;
+                html += `<td style="text-align:right"><strong>${cur(qTot.total_earnings)}</strong></td>`;
+                html += `<td style="text-align:right"><strong>${cur(qTot.total_fees)}</strong></td>`;
+                html += `<td style="text-align:right"><strong>${cur(qTot.total_item_costs)}</strong></td>`;
+                html += `<td style="text-align:right"><strong>${cur(qTot.total_general_costs)}</strong></td>`;
+                html += `<td style="text-align:right"><strong>${cur(qTot.pp_purchases)}</strong></td>`;
+                html += `<td style="text-align:right"><strong>${cur(qTot.pp_income)}</strong></td>`;
+                html += `<td style="text-align:right"><strong>${cur(qTot.total_payouts)}</strong></td>`;
+                html += `<td style="text-align:right"><strong class="${qTot.net >= 0 ? 'text-success' : 'text-danger'}">${cur(qTot.net)}</strong></td>`;
+                html += '</tr>';
+
+                // Month rows within quarter
+                const sortedMonths = qData.months.sort((a, b) => b.month.localeCompare(a.month));
+                sortedMonths.forEach(m => {
+                    const hideM = (yearCollapsed || qCollapsed) ? 'display:none;' : '';
+                    const monthLabel = this._monthName(m.month);
+
+                    // Month summary row
+                    html += `<tr class="fs-row-month fs-child-${yr} fs-child-${qKey}" data-toggle="m-${m.month}" style="cursor:pointer;${hideM}">`;
+                    html += `<td style="padding-left:48px;"><span class="fs-toggle-icon">${this.collapsed['m-' + m.month] ? '&#9654;' : '&#9660;'}</span> ${monthLabel}</td>`;
+                    html += `<td style="text-align:right">${m.auction_count}</td>`;
+                    html += `<td style="text-align:right">${cur(m.total_earnings)}</td>`;
+                    html += `<td style="text-align:right">${cur(m.total_fees)}</td>`;
+                    html += `<td style="text-align:right">${cur(m.total_item_costs)}</td>`;
+                    html += `<td style="text-align:right">${cur(m.total_general_costs)}</td>`;
+                    html += `<td style="text-align:right">${cur(m.pp_purchases)}</td>`;
+                    html += `<td style="text-align:right">${cur(m.pp_income)}</td>`;
+                    html += `<td style="text-align:right">${cur(m.total_payouts)}</td>`;
+                    html += `<td style="text-align:right"><span class="${m.net >= 0 ? 'text-success' : 'text-danger'}">${cur(m.net)}</span></td>`;
+                    html += '</tr>';
+
+                    // Detail sub-rows for this month
+                    const hideD = (yearCollapsed || qCollapsed || !!this.collapsed['m-' + m.month]) ? 'display:none;' : '';
+
+                    // Whatnot/Auction Income
+                    html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="color:#666;font-size:12px;${hideD}">`;
+                    html += `<td style="padding-left:72px;">Auction Income</td>`;
+                    html += `<td style="text-align:right">${m.auction_count}</td>`;
+                    html += `<td style="text-align:right">${cur(m.total_earnings)}</td>`;
+                    html += `<td style="text-align:right">${cur(m.total_fees)}</td>`;
+                    html += `<td style="text-align:right">${cur(m.total_item_costs)}</td>`;
+                    html += '<td></td><td></td><td></td><td></td>';
+                    const aucNet = m.auction_net != null ? m.auction_net : (m.total_item_price - m.total_fees - m.total_item_costs);
+                    html += `<td style="text-align:right">${cur(aucNet)}</td>`;
+                    html += '</tr>';
+
+                    // General Expenses
+                    if (m.total_general_costs > 0) {
+                        html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="color:#666;font-size:12px;${hideD}">`;
+                        html += `<td style="padding-left:72px;">General Expenses</td>`;
+                        html += '<td></td><td></td><td></td><td></td>';
+                        html += `<td style="text-align:right">${cur(m.total_general_costs)}</td>`;
+                        html += '<td></td><td></td><td></td>';
+                        html += `<td style="text-align:right;color:#e53935;">-${cur(m.total_general_costs)}</td>`;
+                        html += '</tr>';
+                    }
+
+                    // PayPal Costs (purchases are negative)
+                    if (m.pp_purchases !== 0 || m.pp_income !== 0 || m.pp_refunds !== 0) {
+                        html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="color:#666;font-size:12px;${hideD}">`;
+                        html += `<td style="padding-left:72px;">PayPal Activity</td>`;
+                        html += '<td></td><td></td><td></td><td></td><td></td>';
+                        html += `<td style="text-align:right">${cur(m.pp_purchases)}</td>`;
+                        html += `<td style="text-align:right">${cur(m.pp_income)}</td>`;
+                        html += '<td></td>';
+                        html += `<td style="text-align:right">${cur(m.pp_purchases + m.pp_income + m.pp_refunds)}</td>`;
+                        html += '</tr>';
+                    }
+
+                    // Payouts
+                    if (m.total_payouts > 0) {
+                        html += `<tr class="fs-row-detail fs-child-${yr} fs-child-${qKey} fs-child-m-${m.month}" style="color:#666;font-size:12px;${hideD}">`;
+                        html += `<td style="padding-left:72px;">Payouts Received</td>`;
+                        html += '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        html += `<td style="text-align:right">${cur(m.total_payouts)}</td>`;
+                        html += `<td style="text-align:right;color:#2e7d32;">${cur(m.total_payouts)}</td>`;
+                        html += '</tr>';
+                    }
+                });
+            });
+        });
+
+        html += '</tbody></table></div></div>';
+
+        container.innerHTML = html;
+
+        // Attach toggle handlers
+        container.querySelectorAll('[data-toggle]').forEach(row => {
+            row.addEventListener('click', () => {
+                const key = row.getAttribute('data-toggle');
+                this.collapsed[key] = !this.collapsed[key];
+                this.renderMonthly();
+            });
+        });
+
+        // Expand/Collapse All
+        document.getElementById('fs-expand-all').addEventListener('click', () => {
+            this.collapsed = {};
+            this.renderMonthly();
+        });
+        document.getElementById('fs-collapse-all').addEventListener('click', () => {
+            sortedYears.forEach(yr => {
+                this.collapsed[yr] = true;
+            });
+            this.renderMonthly();
+        });
+    },
+
+    _emptyTotals() {
+        return {
+            auction_count: 0, total_earnings: 0, total_fees: 0,
+            total_item_costs: 0, total_general_costs: 0,
+            pp_purchases: 0, pp_income: 0, pp_refunds: 0,
+            total_payouts: 0, total_item_price: 0, net: 0, auction_net: 0
+        };
+    },
+
+    _addToTotals(totals, m) {
+        totals.auction_count += m.auction_count || 0;
+        totals.total_earnings += m.total_earnings || 0;
+        totals.total_fees += m.total_fees || 0;
+        totals.total_item_costs += m.total_item_costs || 0;
+        totals.total_general_costs += m.total_general_costs || 0;
+        totals.pp_purchases += m.pp_purchases || 0;
+        totals.pp_income += m.pp_income || 0;
+        totals.pp_refunds += m.pp_refunds || 0;
+        totals.total_payouts += m.total_payouts || 0;
+        totals.total_item_price += m.total_item_price || 0;
+        totals.net += m.net || 0;
+        totals.auction_net += m.auction_net || 0;
+    },
+
+    _monthName(monthStr) {
+        const [yr, mo] = monthStr.split('-');
+        const names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+        return names[parseInt(mo)] + ' ' + yr;
     }
 };
