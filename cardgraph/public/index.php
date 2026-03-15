@@ -84,6 +84,10 @@ $router->post('/api/cost-matrix/preview', ['CostMatrixController', 'preview']);
 $router->post('/api/cost-matrix/apply', ['CostMatrixController', 'apply']);
 $router->post('/api/cost-matrix/clear', ['CostMatrixController', 'clear']);
 
+// === Cards Analytics ===
+$router->get('/api/cards-analytics/summary',  ['CardsAnalyticsController', 'summary']);
+$router->get('/api/cards-analytics/totals',   ['CardsAnalyticsController', 'totals']);
+
 // === Analytics ===
 $router->get('/api/analytics/metrics',           ['AnalyticsController', 'listMetrics']);
 $router->put('/api/analytics/metrics/{id}',       ['AnalyticsController', 'updateMetric']);
