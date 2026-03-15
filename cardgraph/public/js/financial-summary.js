@@ -4,7 +4,7 @@
  */
 const FinancialSummary = {
     initialized: false,
-    currentSubTab: 'overview',
+    currentSubTab: 'monthly',
     costs: [],
     monthlyData: null,
     collapsed: {},  // tracks collapsed state: { '2025': true, '2025-Q1': true }
@@ -20,8 +20,8 @@ const FinancialSummary = {
                     <h1>Financial Summary</h1>
                 </div>
                 <div class="sub-tabs" id="fs-sub-tabs">
-                    <button class="sub-tab active" data-subtab="overview">Summary Overview</button>
-                    <button class="sub-tab" data-subtab="monthly">Monthly Overview</button>
+                    <button class="sub-tab active" data-subtab="monthly">Monthly Overview</button>
+                    <button class="sub-tab" data-subtab="overview">Summary Overview</button>
                     <button class="sub-tab" data-subtab="costs">General Costs</button>
                 </div>
                 <div id="fs-overview" class="sub-panel"></div>
@@ -403,19 +403,23 @@ const FinancialSummary = {
         html += '<button class="btn btn-secondary btn-sm" id="fs-collapse-all">Collapse All</button>';
         html += '</div>';
 
+        // Color styles for the 4 net-calc columns
+        const sGreen = 'text-align:right;background:rgba(46,125,50,0.08);';
+        const sRed   = 'text-align:right;background:rgba(198,40,40,0.08);';
+
         html += '<div class="table-container"><table class="data-table fs-monthly-table">';
 
-        // Header
+        // Header — Payouts moved before Gen. Costs
         html += '<thead><tr>';
         html += '<th style="min-width:200px;">Period</th>';
         html += '<th style="text-align:right">Auctions</th>';
         html += '<th style="text-align:right">Earnings</th>';
         html += '<th style="text-align:right">Fees</th>';
         html += '<th style="text-align:right">Item Costs</th>';
-        html += '<th style="text-align:right">Gen. Costs</th>';
-        html += '<th style="text-align:right">PayPal Out</th>';
-        html += '<th style="text-align:right">PayPal In</th>';
-        html += '<th style="text-align:right">Payouts</th>';
+        html += '<th style="text-align:right;background:rgba(46,125,50,0.15);">Payouts</th>';
+        html += '<th style="text-align:right;background:rgba(198,40,40,0.15);">Gen. Costs</th>';
+        html += '<th style="text-align:right;background:rgba(198,40,40,0.15);">PayPal Out</th>';
+        html += '<th style="text-align:right;background:rgba(46,125,50,0.15);">PayPal In</th>';
         html += '<th style="text-align:right">Net</th>';
         html += '</tr></thead><tbody>';
 
@@ -431,10 +435,10 @@ const FinancialSummary = {
             html += `<td style="text-align:right"><strong>${cur(yTot.total_earnings)}</strong></td>`;
             html += `<td style="text-align:right"><strong>${cur(yTot.total_fees)}</strong></td>`;
             html += `<td style="text-align:right"><strong>${cur(yTot.total_item_costs)}</strong></td>`;
-            html += `<td style="text-align:right"><strong>${cur(yTot.total_general_costs)}</strong></td>`;
-            html += `<td style="text-align:right"><strong>${cur(yTot.pp_purchases)}</strong></td>`;
-            html += `<td style="text-align:right"><strong>${cur(yTot.pp_income)}</strong></td>`;
-            html += `<td style="text-align:right"><strong>${cur(yTot.total_payouts)}</strong></td>`;
+            html += `<td style="text-align:right;background:rgba(46,125,50,0.18);"><strong>${cur(yTot.total_payouts)}</strong></td>`;
+            html += `<td style="text-align:right;background:rgba(198,40,40,0.18);"><strong>${cur(yTot.total_general_costs)}</strong></td>`;
+            html += `<td style="text-align:right;background:rgba(198,40,40,0.18);"><strong>${cur(yTot.pp_purchases)}</strong></td>`;
+            html += `<td style="text-align:right;background:rgba(46,125,50,0.18);"><strong>${cur(yTot.pp_income)}</strong></td>`;
             html += `<td style="text-align:right"><strong class="${yTot.net >= 0 ? 'text-success' : 'text-danger'}">${cur(yTot.net)}</strong></td>`;
             html += '</tr>';
 
@@ -465,10 +469,10 @@ const FinancialSummary = {
                 html += `<td style="text-align:right"><strong>${cur(qTot.total_earnings)}</strong></td>`;
                 html += `<td style="text-align:right"><strong>${cur(qTot.total_fees)}</strong></td>`;
                 html += `<td style="text-align:right"><strong>${cur(qTot.total_item_costs)}</strong></td>`;
-                html += `<td style="text-align:right"><strong>${cur(qTot.total_general_costs)}</strong></td>`;
-                html += `<td style="text-align:right"><strong>${cur(qTot.pp_purchases)}</strong></td>`;
-                html += `<td style="text-align:right"><strong>${cur(qTot.pp_income)}</strong></td>`;
-                html += `<td style="text-align:right"><strong>${cur(qTot.total_payouts)}</strong></td>`;
+                html += `<td style="${sGreen}"><strong>${cur(qTot.total_payouts)}</strong></td>`;
+                html += `<td style="${sRed}"><strong>${cur(qTot.total_general_costs)}</strong></td>`;
+                html += `<td style="${sRed}"><strong>${cur(qTot.pp_purchases)}</strong></td>`;
+                html += `<td style="${sGreen}"><strong>${cur(qTot.pp_income)}</strong></td>`;
                 html += `<td style="text-align:right"><strong class="${qTot.net >= 0 ? 'text-success' : 'text-danger'}">${cur(qTot.net)}</strong></td>`;
                 html += '</tr>';
 
@@ -479,17 +483,17 @@ const FinancialSummary = {
                     const monthLabel = this._monthName(m.month);
                     const monthExpanded = !this.collapsed['m-' + m.month];
 
-                    // Month summary row
-                    html += `<tr class="fs-row-month fs-child-${yr} fs-child-${qKey}" data-toggle="m-${m.month}" style="cursor:pointer;${hideM}">`;
+                    // Month summary row — light yellow highlight
+                    html += `<tr class="fs-row-month fs-child-${yr} fs-child-${qKey}" data-toggle="m-${m.month}" style="cursor:pointer;background:#fffde7;${hideM}">`;
                     html += `<td style="padding-left:48px;"><span class="fs-toggle-icon">${monthExpanded ? '&#9660;' : '&#9654;'}</span> ${monthLabel}</td>`;
                     html += `<td style="text-align:right">${m.auction_count}</td>`;
                     html += `<td style="text-align:right">${cur(m.total_earnings)}</td>`;
                     html += `<td style="text-align:right">${cur(m.total_fees)}</td>`;
                     html += `<td style="text-align:right">${cur(m.total_item_costs)}</td>`;
-                    html += `<td style="text-align:right">${cur(m.total_general_costs)}</td>`;
-                    html += `<td style="text-align:right">${cur(m.pp_purchases)}</td>`;
-                    html += `<td style="text-align:right">${cur(m.pp_income)}</td>`;
-                    html += `<td style="text-align:right">${cur(m.total_payouts)}</td>`;
+                    html += `<td style="${sGreen}">${cur(m.total_payouts)}</td>`;
+                    html += `<td style="${sRed}">${cur(m.total_general_costs)}</td>`;
+                    html += `<td style="${sRed}">${cur(m.pp_purchases)}</td>`;
+                    html += `<td style="${sGreen}">${cur(m.pp_income)}</td>`;
                     html += `<td style="text-align:right"><span class="${m.net >= 0 ? 'text-success' : 'text-danger'}">${cur(m.net)}</span></td>`;
                     html += '</tr>';
 
@@ -514,10 +518,10 @@ const FinancialSummary = {
                             html += `<td style="text-align:right">${day.total_earnings ? cur(day.total_earnings) : ''}</td>`;
                             html += `<td style="text-align:right">${day.total_fees ? cur(day.total_fees) : ''}</td>`;
                             html += `<td style="text-align:right">${day.total_item_costs ? cur(day.total_item_costs) : ''}</td>`;
-                            html += `<td style="text-align:right">${day.total_general_costs ? cur(day.total_general_costs) : ''}</td>`;
-                            html += `<td style="text-align:right">${day.pp_purchases ? cur(day.pp_purchases) : ''}</td>`;
-                            html += `<td style="text-align:right">${day.pp_income ? cur(day.pp_income) : ''}</td>`;
-                            html += `<td style="text-align:right">${day.total_payouts ? cur(day.total_payouts) : ''}</td>`;
+                            html += `<td style="${sGreen}">${day.total_payouts ? cur(day.total_payouts) : ''}</td>`;
+                            html += `<td style="${sRed}">${day.total_general_costs ? cur(day.total_general_costs) : ''}</td>`;
+                            html += `<td style="${sRed}">${day.pp_purchases ? cur(day.pp_purchases) : ''}</td>`;
+                            html += `<td style="${sGreen}">${day.pp_income ? cur(day.pp_income) : ''}</td>`;
                             html += `<td style="text-align:right"><span class="${day.net >= 0 ? 'text-success' : 'text-danger'}">${cur(day.net)}</span></td>`;
                             html += '</tr>';
                         });
@@ -607,8 +611,9 @@ const FinancialSummary = {
         totals.pp_refunds += m.pp_refunds || 0;
         totals.total_payouts += m.total_payouts || 0;
         totals.total_item_price += m.total_item_price || 0;
-        totals.net += m.net || 0;
-        totals.auction_net += m.auction_net || 0;
+        // Net = Payouts - GenCosts - PayPalOut + PayPalIn (only these 4)
+        totals.net = totals.total_payouts - totals.total_general_costs
+                     - Math.abs(totals.pp_purchases) + totals.pp_income;
     },
 
     _monthName(monthStr) {

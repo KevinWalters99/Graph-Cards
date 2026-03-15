@@ -346,10 +346,10 @@ class FinancialSummaryController
 
             // Auction-only net (without PayPal)
             $auctionNet = round($totalItemPrice - $totalFees - $totalItemCosts, 2);
-            // Comprehensive net includes all cost/income sources
+            $totalPayouts = round((float) ($pay['total_payouts'] ?? 0), 2);
+            // Net = Payouts - GenCosts - PayPalOut + PayPalIn (only these 4)
             $comprehensiveNet = round(
-                $totalItemPrice - $totalFees - $totalItemCosts - $totalGeneralCosts
-                + $ppPurchases + $ppIncome + $ppRefunds,
+                $totalPayouts - $totalGeneralCosts - abs($ppPurchases) + $ppIncome,
                 2
             );
 
@@ -506,13 +506,12 @@ class FinancialSummaryController
             $days[$d]['total_payouts'] = round((float) $row['total_payouts'], 2);
         }
 
-        // Compute net for each day and sort
+        // Compute net for each day: Payouts - GenCosts - PayPalOut + PayPalIn
         $result = [];
         foreach ($days as $d => &$day) {
             $day['net'] = round(
-                $day['total_item_price'] - $day['total_fees'] - $day['total_item_costs']
-                - $day['total_general_costs'] + $day['pp_purchases'] + $day['pp_income']
-                + $day['pp_refunds'],
+                $day['total_payouts'] - $day['total_general_costs']
+                - abs($day['pp_purchases']) + $day['pp_income'],
                 2
             );
             $result[] = $day;
